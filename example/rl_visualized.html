@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>强化学习四连例 · 图解</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --purple:#bc8cff; --pink:#f778ba; --cyan:#39c5cf;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.7;}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 24px 90px}
+  header h1{font-size:32px;margin:0 0 10px;letter-spacing:.5px}
+  header p{color:var(--muted);margin:0 0 4px;font-size:15px}
+  .tag{display:inline-block;font-family:var(--mono);font-size:12px;background:var(--panel2);
+    border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--accent);margin-right:6px}
+  section{margin-top:56px}
+  h2{font-size:22px;border-left:4px solid var(--accent);padding-left:12px;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 24px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px;overflow-x:auto}
+  p.lead{font-size:15.5px}
+  code{font-family:var(--mono);font-size:.92em;color:var(--pink);background:var(--panel2);
+    border:1px solid var(--border);border-radius:5px;padding:1px 6px}
+  .box{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;text-align:center}
+  .box .t{font-weight:600;font-size:15px}
+  .box .d{color:var(--muted);font-size:12.5px;margin-top:4px}
+
+  /* agent-env loop */
+  .rl-loop{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+  .node{width:200px;padding:20px;border-radius:12px;text-align:center;border:2px solid}
+  .node.agent{border-color:var(--accent);background:rgba(88,166,255,.08)}
+  .node.env{border-color:var(--green);background:rgba(63,185,80,.08)}
+  .node .t{font-size:18px;font-weight:700}
+  .node.agent .t{color:var(--accent)} .node.env .t{color:var(--green)}
+  .node .d{color:var(--muted);font-size:12.5px;margin-top:6px}
+  .conn{flex:1;min-width:150px;text-align:center;position:relative;padding:0 6px}
+  .conn .lab{font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:6px;display:inline-block}
+  .conn .top{color:var(--amber);background:rgba(210,153,34,.1);border:1px solid var(--amber)}
+  .conn .bot{color:var(--cyan);background:rgba(57,197,207,.1);border:1px solid var(--cyan);margin-top:6px}
+  .conn .a1{color:var(--amber);font-size:20px;line-height:1}
+  .conn .a2{color:var(--cyan);font-size:20px;line-height:1}
+
+  /* progression cards */
+  .cards{display:grid;grid-template-columns:1fr;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:0;overflow:hidden;
+    display:grid;grid-template-columns:64px 1fr}
+  .card .num{display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+    font-size:26px;font-weight:700;color:#fff}
+  .card:nth-child(1) .num{background:linear-gradient(160deg,#1f6feb,#388bfd)}
+  .card:nth-child(2) .num{background:linear-gradient(160deg,#2ea043,#3fb950)}
+  .card:nth-child(3) .num{background:linear-gradient(160deg,#bc8cff,#a371f7)}
+  .card:nth-child(4) .num{background:linear-gradient(160deg,#db61a2,#f778ba)}
+  .card .body{padding:18px 22px}
+  .card h3{margin:0 0 4px;font-size:17px}
+  .card .file{font-family:var(--mono);font-size:12px;color:var(--accent)}
+  .card .new{display:inline-block;font-size:12px;color:var(--amber);border:1px solid var(--amber);
+    border-radius:20px;padding:1px 10px;margin-left:8px;vertical-align:middle}
+  .card p{margin:8px 0 0;font-size:14px;color:var(--text)}
+  .card .meta{margin-top:10px;font-size:12.5px;color:var(--muted)}
+  .card .meta b{color:var(--text);font-weight:600}
+
+  /* formula table */
+  table{border-collapse:collapse;width:100%;font-size:13.5px}
+  th,td{border:1px solid var(--border);padding:10px 12px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--accent);font-weight:600}
+  td code{white-space:nowrap}
+  .formula{font-family:var(--mono);font-size:13px;color:var(--text);background:var(--panel2);
+    border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin:14px 0;overflow-x:auto;white-space:pre}
+  .hl{color:var(--amber)} .hl2{color:var(--cyan)} .hl3{color:var(--green)} .hl4{color:var(--purple)}
+
+  .callout{border-left:4px solid var(--red);background:rgba(248,81,73,.06);
+    border-radius:0 10px 10px 0;padding:16px 20px;margin-top:14px}
+  .callout h4{margin:0 0 6px;color:var(--red);font-size:15px}
+  .callout p{margin:6px 0;font-size:14px}
+  .step{font-family:var(--mono);color:var(--muted);font-size:13px}
+  .step b{color:var(--text)}
+
+  ul{font-size:14.5px} li{margin:5px 0}
+  .footer{margin-top:60px;color:var(--muted);font-size:13px;text-align:center;
+    border-top:1px solid var(--border);padding-top:20px}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.two{grid-template-columns:1fr}}
+
+  /* ============ H5 / 手机竖屏适配 ============ */
+  @media (max-width:640px){
+    body{-webkit-text-size-adjust:100%}
+    .wrap{padding:26px 12px 60px}
+    header h1{font-size:23px;line-height:1.35}
+    header p{font-size:13px}
+    .tag{font-size:11px;margin-bottom:4px}
+    section{margin-top:40px}
+    h2{font-size:18px} .sub{font-size:12.5px;margin-bottom:18px}
+    .panel{padding:16px 12px;border-radius:10px}
+    p.lead{font-size:14px}
+    /* 交互循环竖排 */
+    .rl-loop{flex-direction:column}
+    .node{width:100%;padding:16px}
+    .conn{min-width:0;width:100%;padding:6px 0}
+    .conn .a1,.conn .a2{transform:rotate(90deg);display:inline-block}
+    /* 递进卡片 */
+    .card{grid-template-columns:44px 1fr}
+    .card .num{font-size:20px} .card .body{padding:14px 14px}
+    .card h3{font-size:15.5px} .card p{font-size:13px} .card .meta{font-size:12px}
+    .card .new{display:inline-block;margin:4px 0 0}
+    /* 公式块横向滚动、字号收紧 */
+    .formula{font-size:11.5px;padding:12px 12px}
+    /* 表格 */
+    table{font-size:12px;min-width:460px} th,td{padding:7px 8px}
+  }
+  @media (max-width:380px){ header h1{font-size:21px} .card .num{font-size:18px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>强化学习 · 四连例图解</h1>
+  <p><span class="tag">RL by Example</span><span class="tag">配套 autoresearch</span><span class="tag">中文 / 可视化</span></p>
+  <p>从最简单的老虎机，到教小 GPT 做 RLHF —— 一条由浅入深、每步只多学一个概念的路。</p>
+</header>
+
+<!-- ===================== 1. 核心循环 ===================== -->
+<section>
+  <h2>一、所有强化学习都是这一个循环</h2>
+  <p class="sub">不管多复杂的 RL 算法，骨架都是：智能体做动作 → 环境给反馈 → 智能体据此变得更好。</p>
+  <div class="panel">
+    <div class="rl-loop">
+      <div class="node agent">
+        <div class="t">智能体 Agent</div>
+        <div class="d">看到状态，决定做什么<br>（要学习的就是它）</div>
+      </div>
+      <div class="conn">
+        <div class="a1">───▶</div>
+        <div class="lab top">动作 action</div>
+        <div class="lab bot">状态 state + 奖励 reward</div>
+        <div class="a2">◀───</div>
+      </div>
+      <div class="node env">
+        <div class="t">环境 Environment</div>
+        <div class="d">世界的规则（老虎机/迷宫/<br>倒立摆/打分函数）</div>
+      </div>
+    </div>
+    <p style="text-align:center;color:var(--muted);font-size:13.5px;margin-top:22px">
+      智能体不断试探，环境用<b style="color:var(--amber)">奖励</b>告诉它"这步做得好不好"，
+      目标是<b style="color:var(--text)">让长期累计奖励最大</b>。<br>
+      永恒的矛盾：<b style="color:var(--accent)">探索</b>（试没试过的）vs <b style="color:var(--accent)">利用</b>（用已知最好的）。
+    </p>
+  </div>
+</section>
+
+<!-- ===================== 2. 四连例 ===================== -->
+<section>
+  <h2>二、四个例子，一层层加概念</h2>
+  <p class="sub">每个例子都在前一个基础上，<b>只多引入一个新东西</b>。这样学最不容易懵。</p>
+  <div class="cards">
+
+    <div class="card">
+      <div class="num">01</div>
+      <div class="body">
+        <h3>多臂老虎机<span class="new">新增：探索 vs 利用</span></h3>
+        <div class="file">01_bandit.py</div>
+        <p>K 台老虎机，每台吐钱水平不同且未知。没有"状态"，每步处境都一样，你只需决定<b>拉哪条臂</b>。这是 RL 最干净的形态，专讲那条永恒矛盾。</p>
+        <div class="meta">
+          <b>核心：</b>价值估计 <code>Q[a]</code> 用增量平均更新 · ε-greedy 偶尔随机探索 · UCB"乐观对待没试过的臂"<br>
+          <b>会看到：</b>贪心 ~34% &lt; ε-greedy ~81% &lt; UCB ~86%（选中最优臂的比例）—— 只利用会被困住。
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="num">02</div>
+      <div class="body">
+        <h3>GridWorld 走迷宫<span class="new">新增：状态 & Q 表</span></h3>
+        <div class="file">02_qlearning_gridworld.py</div>
+        <p>加入<b>状态</b>：你站在不同格子，该做的事不同。这就是完整的<b>马尔可夫决策过程(MDP)</b>，用最经典的<b>表格 Q-learning</b> 解。</p>
+        <div class="meta">
+          <b>核心：</b><code>Q[状态,动作]</code> 二维表 · TD 更新（见下方公式）· 折扣 γ、学习率 α<br>
+          <b>会看到：</b>前期乱走掉坑（平均 −17 分），学好后稳走最短路（+2 分），并打印一张箭头策略图。
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="num">03</div>
+      <div class="body">
+        <h3>CartPole 倒立摆<span class="new">新增：神经网络 + 策略梯度</span></h3>
+        <div class="file">03_cartpole_reinforce.py</div>
+        <p>状态是 4 个<b>连续</b>实数，没法做表格 → 用<b>神经网络</b>当函数。而且换思路：不学价值，<b>直接学策略</b>（输出动作概率），这叫策略梯度，最基础版是 <b>REINFORCE</b>。</p>
+        <div class="meta">
+          <b>核心：</b>玩完一整局看回报，<b>好就提高这局做过动作的概率</b> · <code>loss = −Σ logπ(a|s)·G</code><br>
+          <b>会看到：</b>杆子坚持步数从 ~40 涨到几百（REINFORCE 方差大、曲线会抖，正常）。物理引擎自己实现，不依赖 gymnasium。
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="num">04</div>
+      <div class="body">
+        <h3>小 GPT 做 GRPO<span class="new">新增：在语言模型上做 RL</span></h3>
+        <div class="file">04_grpo_tiny_llm.py</div>
+        <p>把 RL 搬到<b>语言模型</b>上 —— 这正是 ChatGPT / DeepSeek "对齐"那一步在做的事。搭一个真·迷你 GPT，用 <b>GRPO</b>（DeepSeek 提出，不需要价值网络）教它学会一个可打分的任务。</p>
+        <div class="meta">
+          <b>核心：</b>对同一题生成<b>一组 G 个答案</b>，谁比组内平均分高就强化谁（<b>组相对优势</b>）· <code>loss = −Σ adv·logπ</code><br>
+          <b>会看到：</b>组内平均奖励 0.26 → 0.99，模型从乱序数字学会输出 <code>0 1 4 5 7 9</code> 这样的严格递增串 —— 全程没有标准答案。
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================== 3. 四条更新公式 ===================== -->
+<section>
+  <h2>三、四个例子的"更新公式"其实是一家</h2>
+  <p class="sub">它们都长成"<b>新估计 = 旧估计 + 步长 ×（更靠谱的目标 − 旧估计）</b>"，或"<b>把好的行为概率推高</b>"。看一眼就懂它们的亲缘关系。</p>
+  <div class="panel">
+    <div class="formula">01 老虎机（增量平均）
+   Q[a] ← Q[a] + <span class="hl3">(1/N)</span> · ( <span class="hl">r</span> − Q[a] )
+   ——拉一次就把这条臂的估计往实际奖励 r 挪一点</div>
+
+    <div class="formula">02 Q-learning（TD 更新，多了"状态"和"未来"）
+   Q[s,a] ← Q[s,a] + <span class="hl3">α</span> · ( <span class="hl">r</span> + <span class="hl4">γ·max Q[s',·]</span> − Q[s,a] )
+                              └────── 更靠谱的目标 ──────┘
+   ——当下奖励 r 加上"到了新格子 s' 今后还能拿的最好分"，作为新目标</div>
+
+    <div class="formula">03 REINFORCE（策略梯度，直接调动作概率）
+   loss = − Σ_t  <span class="hl2">log π(a_t | s_t)</span> · <span class="hl">G_t</span>
+   ——这局回报 G 高 → 把这局做过的动作概率往上推（梯度上升期望回报）</div>
+
+    <div class="formula">04 GRPO（策略梯度 + 组内相对优势，不用价值网络）
+   advantage_i = ( <span class="hl">r_i</span> − <span class="hl4">mean(组内)</span> ) / std(组内)
+   loss = − Σ_i  advantage_i · <span class="hl2">log π(答案_i)</span>
+   ——同一题生成一组答案，比平均好的推高、比平均差的压低</div>
+
+    <p style="color:var(--muted);font-size:13.5px;margin:10px 0 0">
+      看出来了吗：<b style="color:var(--text)">01→02</b> 是给"价值更新"加上了状态和未来（γ）；
+      <b style="color:var(--text)">02→03</b> 是从"学价值"换成"直接学策略"、并用神经网络；
+      <b style="color:var(--text)">03→04</b> 是把"动作"换成"生成下一个 token"、把单条回报换成"组内相对优势"。一脉相承。
+    </p>
+  </div>
+</section>
+
+<!-- ===================== 4. reward hacking ===================== -->
+<section>
+  <h2>四、一个真实踩到的坑：奖励被钻空子（reward hacking）</h2>
+  <p class="sub">写例子 04 时真实发生的事，比任务本身更值得记住：<b>RL 的难点常常不在算法，而在"奖励怎么定"</b>。</p>
+  <div class="panel">
+    <div class="callout">
+      <h4>模型总在"钻奖励的空子"，而不是真学会任务</h4>
+      <p class="step"><b>奖励 v1</b> = "非递减(左≤右)的比例" → 模型输出 <code>4 4 4 4 4 4</code> <b>全一样</b>！每对都满足≤，轻松满分，却没学会排序。</p>
+      <p class="step"><b>奖励 v2</b> = "严格递增(左&lt;右)的比例" → 堵住全相同，但又冒出 <code>1 2 3 8 1 2 3 8</code> <b>循环</b>，只在断点丢一分照样拿 0.86。</p>
+      <p class="step"><b>奖励 v3</b>（最终用的）= "从开头<b>连续</b>递增多长" → 断一次就大幅扣分，捷径全失效，模型只能老实从头排到尾。</p>
+    </div>
+    <p style="font-size:14px;margin:16px 0 0">
+      这就是著名的 <b>reward hacking</b>：你以为在教 A，奖励却被某条捷径 B 骗走了，是 RLHF 最头疼的问题之一。
+      例子 04 里还用了两个真实 RL 技巧来对付"过早收敛"：
+      <b>熵奖励</b>（鼓励保持探索，PPO/A3C 标配）和合适的<b>任务难度</b>（让全局最优落在模型够得着的地方）。
+    </p>
+  </div>
+</section>
+
+<!-- ===================== 5. 接回 autoresearch ===================== -->
+<section>
+  <h2>五、它和 autoresearch 是同一种循环</h2>
+  <p class="sub">理解了这四个例子，再看本项目的"自主研究循环"会清楚很多。</p>
+  <div class="two">
+    <div class="box" style="text-align:left">
+      <div class="t" style="color:var(--pink)">autoresearch 的循环</div>
+      <div class="d" style="text-align:left;margin-top:8px">
+        AI agent 改 <code>train.py</code> 一个旋钮 → 训练 5 分钟 →
+        看 <code>val_bpb</code> 降没降 → 更好就保留、否则丢弃 → 再来一轮。<br>
+        <b style="color:var(--text)">奖励信号 = −val_bpb</b>，被优化的是<b style="color:var(--text)">代码</b>。
+      </div>
+    </div>
+    <div class="box" style="text-align:left">
+      <div class="t" style="color:var(--accent)">例子 04 GRPO 的循环</div>
+      <div class="d" style="text-align:left;margin-top:8px">
+        模型生成一组答案 → 奖励函数打分 →
+        比平均好的强化、差的压低 → 参数更新 → 再来一轮。<br>
+        <b style="color:var(--text)">奖励信号 = 任务得分</b>，被优化的是<b style="color:var(--text)">模型参数</b>。
+      </div>
+    </div>
+  </div>
+  <p style="text-align:center;color:var(--muted);font-size:14px;margin-top:20px">
+    一个在调代码、一个在调参数，但都是 <b style="color:var(--text)">"试错 → 打分 → 保留更好的"</b> 这同一种自我迭代。<br>
+    这正是把"研究"和"学习"统一起来的那个朴素而强大的想法。
+  </p>
+</section>
+
+<div class="footer">
+  跑起来看：<code>python3 example/01_bandit.py</code> … <code>04_grpo_tiny_llm.py</code><br>
+  代码都带详细中文注释 · 详见 <a href="README.md">example/README.md</a> · 配套 <a href="../README.md">autoresearch</a>
+</div>
+
+</div>
+</body>
+</html>

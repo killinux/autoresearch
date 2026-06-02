@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>强化学习核心概念 · 速查与关系图</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --purple:#bc8cff; --pink:#f778ba; --cyan:#39c5cf;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.7;}
+  .wrap{max-width:1100px;margin:0 auto;padding:48px 24px 90px}
+  header h1{font-size:32px;margin:0 0 10px;letter-spacing:.5px}
+  header p{color:var(--muted);margin:0 0 4px;font-size:15px}
+  .tag{display:inline-block;font-family:var(--mono);font-size:12px;background:var(--panel2);
+    border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--accent);margin-right:6px}
+  section{margin-top:56px}
+  h2{font-size:22px;border-left:4px solid var(--accent);padding-left:12px;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 24px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px;overflow-x:auto}
+  code{font-family:var(--mono);font-size:.9em;color:var(--pink);background:var(--panel2);
+    border:1px solid var(--border);border-radius:5px;padding:1px 6px}
+
+  /* ---------- 关系图：分层 ---------- */
+  .tier{border:1px solid var(--border);border-radius:12px;padding:14px 16px 16px;margin:0;position:relative;background:var(--panel2)}
+  .tier + .down{display:flex;justify-content:center;color:var(--muted);font-size:22px;margin:2px 0}
+  .tier .cap{position:absolute;top:-11px;left:16px;background:var(--panel);border:1px solid var(--border);
+    border-radius:20px;padding:1px 12px;font-size:12px;color:var(--accent);font-family:var(--mono)}
+  .tier .cap.c-amber{color:var(--amber)} .tier .cap.c-green{color:var(--green)}
+  .tier .cap.c-purple{color:var(--purple)} .tier .cap.c-pink{color:var(--pink)}
+  .tier .cap.c-cyan{color:var(--cyan)} .tier .cap.c-red{color:var(--red)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:8px}
+  .chip{border:1px solid var(--border);border-radius:9px;padding:8px 13px;background:var(--panel);
+    text-align:center;min-width:96px}
+  .chip b{display:block;font-size:14px}
+  .chip s{display:block;text-decoration:none;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px}
+  .chip.k-blue{border-color:var(--accent)} .chip.k-blue b{color:var(--accent)}
+  .chip.k-green{border-color:var(--green)} .chip.k-green b{color:var(--green)}
+  .chip.k-amber{border-color:var(--amber)} .chip.k-amber b{color:var(--amber)}
+  .chip.k-purple{border-color:var(--purple)} .chip.k-purple b{color:var(--purple)}
+  .chip.k-pink{border-color:var(--pink)} .chip.k-pink b{color:var(--pink)}
+  .chip.k-cyan{border-color:var(--cyan)} .chip.k-cyan b{color:var(--cyan)}
+  .chip.k-red{border-color:var(--red)} .chip.k-red b{color:var(--red)}
+  .arrowx{color:var(--muted);font-size:18px;align-self:center}
+  .note{font-size:12.5px;color:var(--muted);margin-top:10px;text-align:center}
+  .note b{color:var(--text)}
+  .loopwrap{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+  .conn{flex:0 0 200px;min-width:160px;text-align:center}
+  .conn .lab{font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:6px;display:inline-block}
+  .conn .top{color:var(--amber);background:rgba(210,153,34,.1);border:1px solid var(--amber)}
+  .conn .bot{color:var(--cyan);background:rgba(57,197,207,.1);border:1px solid var(--cyan);margin-top:5px}
+
+  /* 横切侧栏 */
+  .crosscut{margin-top:22px;border:1px dashed var(--border);border-radius:12px;padding:14px 18px}
+  .crosscut .cap{font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:8px}
+
+  /* ---------- 词表 ---------- */
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin-top:4px}
+  th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--accent);font-weight:600}
+  td:nth-child(1){font-family:var(--mono);color:var(--amber);white-space:nowrap;font-weight:600}
+  td:nth-child(2){font-family:var(--mono);color:var(--muted);font-size:12px;white-space:nowrap}
+  td:nth-child(3){white-space:nowrap;font-weight:600}
+  .grp{margin-top:26px}
+  .grp h3{font-size:16px;margin:0 0 8px;color:var(--text)}
+  .grp h3 .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;vertical-align:middle}
+
+  ul{font-size:14.5px} li{margin:6px 0}
+  .footer{margin-top:60px;color:var(--muted);font-size:13px;text-align:center;border-top:1px solid var(--border);padding-top:20px}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+
+  /* ============ H5 / 手机竖屏适配 ============ */
+  @media (max-width:640px){
+    body{-webkit-text-size-adjust:100%}
+    .wrap{padding:26px 12px 56px}
+    header h1{font-size:23px;line-height:1.35}
+    header p{font-size:13px}
+    .tag{font-size:11px;margin-bottom:4px}
+    section{margin-top:40px}
+    h2{font-size:18px}
+    .sub{font-size:12.5px;margin-bottom:18px}
+    .panel{padding:16px 12px;border-radius:10px}
+
+    /* 关系图：交互循环改为竖排 */
+    .loopwrap{flex-direction:column;gap:8px}
+    .conn{flex:0 0 auto;min-width:0;width:100%}
+    .conn .lab{font-size:11px}
+    .conn br{display:none}
+    .conn .lab.top::after{content:" ▼"}
+    .conn .lab.bot{margin-top:6px}
+
+    /* 所有 chip 自适应、去掉写死的 min-width，两列排布 */
+    .row{gap:8px}
+    .chip,.chip[style]{min-width:0 !important;flex:1 1 42%;padding:7px 9px}
+    .chip b{font-size:12.5px} .chip s{font-size:10px}
+    .arrowx{flex:1 1 100%;font-size:13px;text-align:center}
+    .tier{padding:13px 11px 14px} .tier .cap{font-size:11px;left:12px}
+    .note{font-size:11.5px}
+    .crosscut{padding:13px 12px}
+
+    /* 表格：在面板内横向滚动，字号收紧 */
+    table{font-size:11.5px;min-width:480px}
+    th,td{padding:7px 8px}
+    td:nth-child(2){font-size:10.5px}
+    .grp{margin-top:20px} .grp h3{font-size:14px}
+    ul{font-size:13.5px}
+  }
+  @media (max-width:380px){
+    .chip,.chip[style]{flex:1 1 100%}
+    header h1{font-size:21px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>强化学习核心概念 · 速查 & 关系图</h1>
+  <p><span class="tag">RL Concepts</span><span class="tag">缩写解释</span><span class="tag">一张图串起来</span><span class="tag">配套 autoresearch</span></p>
+  <p>所有缩写一次说清，并用一张分层图把它们彼此的关系连起来。配合 <a href="rl_visualized.html">四连例图解</a> 一起看更好。</p>
+</header>
+
+<!-- ============ 关系图 ============ -->
+<section>
+  <h2>一、一张图把所有概念关联起来</h2>
+  <p class="sub">从上到下是"信号怎么变成学习"，越往下越具体；同一层的是同类概念；虚线框是贯穿全程的横切概念。</p>
+  <div class="panel">
+
+    <!-- 第1层：交互循环 -->
+    <div class="tier">
+      <span class="cap">① 交互循环 · MDP</span>
+      <div class="loopwrap">
+        <div class="chip k-blue" style="min-width:150px"><b>智能体 Agent</b><s>策略 π(a|s)</s></div>
+        <div class="conn">
+          <div class="lab top">动作 a ───▶</div><br>
+          <div class="lab bot">◀─── 状态 s · 奖励 r</div>
+        </div>
+        <div class="chip k-green" style="min-width:150px"><b>环境 Environment</b><s>转移 P(s'|s,a)</s></div>
+      </div>
+      <div class="note">这套 ⟨状态 s, 动作 a, 奖励 r, 转移 P, 折扣 γ⟩ 就叫一个 <b>MDP（马尔可夫决策过程）</b>。看不全 s 时叫 <b>POMDP</b>。</div>
+    </div>
+    <div class="down">▼ 环境不断吐出奖励 r</div>
+
+    <!-- 第2层：信号加工 -->
+    <div class="tier">
+      <span class="cap c-cyan">② 把奖励变成"值" · 信号加工</span>
+      <div class="row">
+        <div class="chip k-cyan"><b>奖励 r</b><s>reward（单步）</s></div>
+        <span class="arrowx">＋γ累加▶</span>
+        <div class="chip k-cyan"><b>回报 G</b><s>return（一整局）</s></div>
+        <span class="arrowx">取期望▶</span>
+        <div class="chip k-cyan"><b>价值 V / Q</b><s>state / action value</s></div>
+        <span class="arrowx">相减▶</span>
+        <div class="chip k-cyan"><b>优势 A</b><s>A = Q − V</s></div>
+      </div>
+      <div class="note"><b>γ（折扣因子）</b>：未来的奖励打折。<b>V(s)</b>=在 s 往后预计总回报；<b>Q(s,a)</b>=在 s 做 a 的预计总回报；<b>优势 A</b>=这个动作比平均好多少。</div>
+    </div>
+    <div class="down">▼ 怎么把"值"学准？</div>
+
+    <!-- 第3层：更新引擎 -->
+    <div class="tier">
+      <span class="cap c-green">③ 更新引擎 · 怎么学</span>
+      <div class="row">
+        <div class="chip k-green"><b>贝尔曼方程</b><s>Bellman</s></div>
+        <span class="arrowx">导出▶</span>
+        <div class="chip k-green"><b>时序差分 TD</b><s>用 r+γV(s') 修正 V(s)</s></div>
+        <span class="arrowx">误差▶</span>
+        <div class="chip k-green"><b>TD 误差 δ</b><s>δ = 目标 − 现状</s></div>
+      </div>
+      <div class="note">核心句式：<b>新估计 = 旧估计 + α·(更靠谱的目标 − 旧估计)</b>。<b>α 学习率</b>控制每次挪多少。这条贯穿 01～04 全部例子。</div>
+    </div>
+    <div class="down">▼ 拿这套工具，有两大流派</div>
+
+    <!-- 第4层：两大家族 -->
+    <div class="tier">
+      <span class="cap c-purple">④ 两大算法家族（及其合体）</span>
+      <div class="row" style="align-items:stretch">
+        <div class="chip k-purple" style="min-width:230px">
+          <b>价值法 Value-based</b><s>先学 Q，再据 Q 选动作</s>
+          <div class="row" style="margin-top:8px;gap:6px">
+            <div class="chip k-purple" style="min-width:78px;padding:5px 8px"><b style="font-size:12.5px">SARSA</b></div>
+            <div class="chip k-purple" style="min-width:78px;padding:5px 8px"><b style="font-size:12.5px">Q-learning</b></div>
+            <div class="chip k-purple" style="min-width:78px;padding:5px 8px"><b style="font-size:12.5px">DQN</b></div>
+          </div>
+        </div>
+        <span class="arrowx" style="font-size:14px">合体▶<br>Actor-Critic</span>
+        <div class="chip k-pink" style="min-width:230px">
+          <b>策略法 Policy-based</b><s>不学Q，直接学策略 π</s>
+          <div class="row" style="margin-top:8px;gap:6px">
+            <div class="chip k-pink" style="min-width:90px;padding:5px 8px"><b style="font-size:12.5px">REINFORCE</b></div>
+            <div class="chip k-pink" style="min-width:90px;padding:5px 8px"><b style="font-size:12.5px">策略梯度 PG</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="note"><b>Actor-Critic（AC）</b>= 两家合体：Actor 学策略、Critic 学价值给 Actor 当裁判。<b>A2C / A3C</b> 是它的并行版本。</div>
+    </div>
+    <div class="down">▼ 现代主力（基本都是 Actor-Critic 的改良）</div>
+
+    <!-- 第5层：现代算法 -->
+    <div class="tier">
+      <span class="cap c-pink">⑤ 现代主流算法</span>
+      <div class="row">
+        <div class="chip k-pink"><b>TRPO</b><s>信赖域，限制步子别太大</s></div>
+        <div class="chip k-pink"><b>PPO</b><s>TRPO 的简化版，最常用</s></div>
+        <div class="chip k-pink"><b>GAE</b><s>更稳地估优势 A</s></div>
+        <div class="chip k-pink"><b>DDPG/TD3/SAC</b><s>连续动作控制</s></div>
+      </div>
+      <div class="note">它们都靠<b>优势 A</b>（第②层）做策略梯度更新；<b>PPO</b> 是工业界与 RLHF 的默认选择。</div>
+    </div>
+    <div class="down">▼ 把这一切搬到大语言模型上</div>
+
+    <!-- 第6层：LLM RL -->
+    <div class="tier">
+      <span class="cap c-red">⑥ 大模型的强化学习（后训练 / 对齐）</span>
+      <div class="row">
+        <div class="chip k-red"><b>RLHF</b><s>用人类偏好做RL</s></div>
+        <div class="chip k-red"><b>RM</b><s>奖励模型，给回答打分</s></div>
+        <div class="chip k-red"><b>KL 惩罚</b><s>别跑太偏离原模型</s></div>
+        <span class="arrowx">▶</span>
+        <div class="chip k-red"><b>GRPO</b><s>组内相对优势，免Critic</s></div>
+        <div class="chip k-red"><b>RLVR</b><s>用可验证奖励(对错)</s></div>
+        <div class="chip k-red"><b>DPO</b><s>旁支：免RL直接学偏好</s></div>
+      </div>
+      <div class="note">"动作"= 生成下一个 token，"一整局"= 生成一段回答。<b>RLHF</b> 经典用 PPO+奖励模型RM+KL惩罚；<b>GRPO</b>(DeepSeek)用一组答案的组内平均当基线、省掉Critic；<b>RLVR</b>把奖励换成"答案对不对"这种可自动验证的信号（≈例子04）。</div>
+    </div>
+
+    <!-- 横切概念 -->
+    <div class="crosscut">
+      <div class="cap">⟂ 横切概念（贯穿所有层，不属于某一层）</div>
+      <div class="row" style="justify-content:flex-start">
+        <div class="chip k-amber"><b>探索 vs 利用</b><s>ε-greedy · UCB · 熵H</s></div>
+        <div class="chip k-amber"><b>On / Off-policy</b><s>用不用旧数据学</s></div>
+        <div class="chip k-amber"><b>Model-free / based</b><s>建不建环境模型</s></div>
+        <div class="chip k-amber"><b>回合 / 轨迹</b><s>episode · τ · rollout</s></div>
+        <div class="chip k-amber"><b>经验回放</b><s>replay buffer</s></div>
+        <div class="chip k-amber"><b>奖励塑形 / 钻空子</b><s>shaping · hacking</s></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 速查表 ============ -->
+<section>
+  <h2>二、概念缩写速查表</h2>
+  <p class="sub">缩写 / 符号 → 英文全称 → 中文 → 一句话含义。按上面的分层归类。</p>
+  <div class="panel">
+
+    <div class="grp">
+      <h3><span class="dot" style="background:var(--accent)"></span>① 基本框架（MDP 五件套）</h3>
+      <table>
+        <tr><th style="width:120px">符号/缩写</th><th style="width:230px">英文全称</th><th style="width:120px">中文</th><th>一句话含义</th></tr>
+        <tr><td>Agent</td><td>Agent</td><td>智能体</td><td>做决策、要被训练的那个家伙（就是"策略"）。</td></tr>
+        <tr><td>Env</td><td>Environment</td><td>环境</td><td>世界的规则；接收动作、返回新状态和奖励。</td></tr>
+        <tr><td>s</td><td>State</td><td>状态</td><td>当前处境的完整描述（迷宫里=站哪格）。</td></tr>
+        <tr><td>o</td><td>Observation</td><td>观测</td><td>智能体实际看到的（可能只是状态的一部分）。</td></tr>
+        <tr><td>a</td><td>Action</td><td>动作</td><td>智能体能做的选择（上下左右 / 生成哪个token）。</td></tr>
+        <tr><td>r</td><td>Reward</td><td>奖励</td><td>环境对单步的即时打分，RL 唯一的学习信号。</td></tr>
+        <tr><td>π</td><td>Policy</td><td>策略</td><td>从状态到动作的规则 π(a|s)，<b>RL 要学的就是它</b>。</td></tr>
+        <tr><td>MDP</td><td>Markov Decision Process</td><td>马尔可夫决策过程</td><td>RL 的标准数学框架：⟨s, a, r, 转移P, γ⟩。</td></tr>
+        <tr><td>POMDP</td><td>Partially Observable MDP</td><td>部分可观测MDP</td><td>看不全状态的 MDP（只有观测 o）。</td></tr>
+      </table>
+    </div>
+
+    <div class="grp">
+      <h3><span class="dot" style="background:var(--cyan)"></span>② 回报与价值</h3>
+      <table>
+        <tr><th style="width:120px">符号/缩写</th><th style="width:230px">英文全称</th><th style="width:120px">中文</th><th>一句话含义</th></tr>
+        <tr><td>G</td><td>Return</td><td>回报</td><td>从某步往后的（折扣）累计奖励，"这局总共得多少"。</td></tr>
+        <tr><td>γ</td><td>Gamma / Discount factor</td><td>折扣因子</td><td>0~1，越小越"短视"；让未来的奖励打折累加。</td></tr>
+        <tr><td>V(s)</td><td>State-Value function</td><td>状态价值</td><td>站在 s、按当前策略往后能拿的期望回报。</td></tr>
+        <tr><td>Q(s,a)</td><td>Action-Value function</td><td>动作价值</td><td>在 s 做 a、之后按策略走的期望回报（Q表存的就是它）。</td></tr>
+        <tr><td>A(s,a)</td><td>Advantage</td><td>优势</td><td>A = Q − V，"这个动作比平均好多少"，策略梯度的关键。</td></tr>
+        <tr><td>Bellman</td><td>Bellman Equation</td><td>贝尔曼方程</td><td>价值的递归关系：当前值=即时奖励+γ·后续值。</td></tr>
+        <tr><td>TD</td><td>Temporal Difference</td><td>时序差分</td><td>边走边用 r+γV(s') 来修正 V(s)，不必等整局结束。</td></tr>
+        <tr><td>δ</td><td>TD error</td><td>TD 误差</td><td>δ = (r+γV(s')) − V(s)，更新就是朝它的方向挪。</td></tr>
+      </table>
+    </div>
+
+    <div class="grp">
+      <h3><span class="dot" style="background:var(--amber)"></span>③ 学习与探索（横切）</h3>
+      <table>
+        <tr><th style="width:120px">符号/缩写</th><th style="width:230px">英文全称</th><th style="width:120px">中文</th><th>一句话含义</th></tr>
+        <tr><td>α</td><td>Alpha / Learning rate</td><td>学习率</td><td>每次更新朝目标挪多大一步。</td></tr>
+        <tr><td>—</td><td>Exploration / Exploitation</td><td>探索 / 利用</td><td>RL 永恒矛盾：试新的 vs 用已知最好的。</td></tr>
+        <tr><td>ε-greedy</td><td>Epsilon-greedy</td><td>ε-贪心</td><td>以 ε 概率随机探索，其余时候选当前最优（例子01/02）。</td></tr>
+        <tr><td>UCB</td><td>Upper Confidence Bound</td><td>置信上界</td><td>给没试过的动作加"乐观奖金"，更聪明的探索（例子01）。</td></tr>
+        <tr><td>H</td><td>Entropy (bonus)</td><td>熵（奖励）</td><td>鼓励策略别太确定，保持探索、防过早收敛（例子04）。</td></tr>
+        <tr><td>τ</td><td>Trajectory / Rollout</td><td>轨迹 / 采样</td><td>一次从头玩到尾产生的 (s,a,r) 序列。</td></tr>
+        <tr><td>—</td><td>Episode</td><td>回合</td><td>一局完整的交互（到终点/失败/超时结束）。</td></tr>
+        <tr><td>—</td><td>Replay Buffer</td><td>经验回放池</td><td>存历史经验反复利用，提升样本效率（DQN 用）。</td></tr>
+        <tr><td>—</td><td>Credit Assignment</td><td>信用分配</td><td>最后的好/坏结果，该归功/归咎于前面哪一步？RL 的难点。</td></tr>
+      </table>
+    </div>
+
+    <div class="grp">
+      <h3><span class="dot" style="background:var(--purple)"></span>④ 算法分类（看算法先看这三对）</h3>
+      <table>
+        <tr><th style="width:160px">缩写/术语</th><th style="width:200px">英文</th><th style="width:110px">中文</th><th>一句话含义</th></tr>
+        <tr><td>Model-free / based</td><td>Model-free / Model-based</td><td>无模型 / 有模型</td><td>要不要先学一个"环境怎么变"的模型。多数RL是无模型。</td></tr>
+        <tr><td>On / Off-policy</td><td>On-policy / Off-policy</td><td>同策略 / 异策略</td><td>只能用"当前策略"产生的数据学(on)，还是能用旧/别人的数据(off)。</td></tr>
+        <tr><td>Value / Policy-based</td><td>Value- / Policy-based</td><td>价值法 / 策略法</td><td>先学价值再选动作，还是直接学策略。Actor-Critic 是两者合体。</td></tr>
+      </table>
+    </div>
+
+    <div class="grp">
+      <h3><span class="dot" style="background:var(--pink)"></span>⑤ 经典与现代算法</h3>
+      <table>
+        <tr><th style="width:120px">缩写</th><th style="width:250px">英文全称</th><th style="width:110px">中文</th><th>一句话含义</th></tr>
+        <tr><td>SARSA</td><td>State-Action-Reward-State-Action</td><td>—</td><td>on-policy 的表格法，按"实际下一个动作"更新Q。</td></tr>
+        <tr><td>Q-learning</td><td>Q-learning</td><td>—</td><td>off-policy 表格法，按"下一状态最优动作"更新Q（例子02）。</td></tr>
+        <tr><td>DQN</td><td>Deep Q-Network</td><td>深度Q网络</td><td>用神经网络代替Q表 + 经验回放，玩雅达利成名。</td></tr>
+        <tr><td>PG</td><td>Policy Gradient</td><td>策略梯度</td><td>直接对"动作概率"求梯度去优化期望回报的总称。</td></tr>
+        <tr><td>REINFORCE</td><td>REINFORCE</td><td>—</td><td>最基础的策略梯度：用整局回报当信号（例子03）。</td></tr>
+        <tr><td>AC</td><td>Actor-Critic</td><td>演员-评论家</td><td>Actor学策略、Critic学价值当裁判，降低方差。</td></tr>
+        <tr><td>A2C/A3C</td><td>(Asynchronous) Advantage Actor-Critic</td><td>优势AC（并行）</td><td>用优势A的Actor-Critic，A3C是多线程异步版。</td></tr>
+        <tr><td>TRPO</td><td>Trust Region Policy Optimization</td><td>信赖域策略优化</td><td>限制每次策略更新幅度，稳但复杂。</td></tr>
+        <tr><td>PPO</td><td>Proximal Policy Optimization</td><td>近端策略优化</td><td>TRPO的简化版(裁剪)，又稳又好用，业界默认、RLHF常用。</td></tr>
+        <tr><td>GAE</td><td>Generalized Advantage Estimation</td><td>广义优势估计</td><td>在偏差和方差间折中地估计优势A，PPO标配。</td></tr>
+        <tr><td>DDPG/TD3/SAC</td><td>Deep Deterministic PG / Twin-Delayed / Soft AC</td><td>—</td><td>面向连续动作（机器人控制）的Actor-Critic家族。</td></tr>
+      </table>
+    </div>
+
+    <div class="grp">
+      <h3><span class="dot" style="background:var(--red)"></span>⑥ 大模型的强化学习（后训练 / 对齐）</h3>
+      <table>
+        <tr><th style="width:120px">缩写</th><th style="width:260px">英文全称</th><th style="width:120px">中文</th><th>一句话含义</th></tr>
+        <tr><td>RLHF</td><td>RL from Human Feedback</td><td>人类反馈强化学习</td><td>用人类偏好训出奖励模型，再用RL(常是PPO)对齐LLM。</td></tr>
+        <tr><td>RM</td><td>Reward Model</td><td>奖励模型</td><td>学人类喜好、给模型回答打分的网络，当RLHF的奖励来源。</td></tr>
+        <tr><td>KL</td><td>KL divergence (penalty)</td><td>KL散度惩罚</td><td>惩罚新模型偏离原模型太远，防训崩/胡说。</td></tr>
+        <tr><td>GRPO</td><td>Group Relative Policy Optimization</td><td>组相对策略优化</td><td>DeepSeek提出：同题生成一组答案，用组内平均当基线，<b>免Critic</b>（例子04）。</td></tr>
+        <tr><td>RLVR</td><td>RL with Verifiable Rewards</td><td>可验证奖励强化学习</td><td>奖励改成"答案对不对"这类能自动判定的信号（数学/代码），如例子04。</td></tr>
+        <tr><td>DPO</td><td>Direct Preference Optimization</td><td>直接偏好优化</td><td>旁支：跳过奖励模型和RL，直接用偏好数据微调，更省事。</td></tr>
+      </table>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 对应到四个例子 ============ -->
+<section>
+  <h2>三、这些概念在四个例子里各自登场</h2>
+  <p class="sub">概念不是背的，跑一遍代码就记住了。对照 <a href="README.md">example/README.md</a>。</p>
+  <div class="panel">
+    <ul>
+      <li><code>01_bandit.py</code> ——
+        <b>动作 a、奖励 r、价值估计 Q、探索vs利用、ε-greedy、UCB</b>。最干净，没有状态。</li>
+      <li><code>02_qlearning_gridworld.py</code> ——
+        新增 <b>状态 s、MDP、Q(s,a)、贝尔曼/TD、γ、α、Q-learning</b>。表格法的代表。</li>
+      <li><code>03_cartpole_reinforce.py</code> ——
+        新增 <b>策略 π、神经网络逼近、回报 G、策略梯度、REINFORCE、基线/优势思想、episode</b>。</li>
+      <li><code>04_grpo_tiny_llm.py</code> ——
+        新增 <b>LLM 上的 RL、GRPO、组相对优势、熵奖励、可验证奖励(RLVR)、reward hacking</b>。</li>
+    </ul>
+    <p style="color:var(--muted);font-size:13.5px;margin:6px 0 0">
+      一条主线串起来：<b style="color:var(--text)">动作奖励(01) → 加状态做表格(02) → 用网络学策略(03) → 搬到语言模型(04)</b>。
+      再回看本仓库 <a href="../README.md">autoresearch</a> 的"改代码→看val_bpb→保留更好的"，会发现是同一种"试错→打分→迭代"的循环。
+    </p>
+  </div>
+</section>
+
+<div class="footer">
+  配套：<a href="rl_visualized.html">四连例图解 rl_visualized.html</a> · <a href="README.md">README.md</a> · 代码 <code>01~04_*.py</code><br>
+  缩写记不住就回来查这张表 · 配套 <a href="../README.md">autoresearch</a>
+</div>
+
+</div>
+</body>
+</html>
