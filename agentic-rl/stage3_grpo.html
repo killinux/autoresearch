@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRPO / RLVR 图解 · stage3_grpo.py 是怎么回事</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --purple:#bc8cff; --pink:#f778ba; --cyan:#39c5cf;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75;}
+  .wrap{max-width:840px;margin:0 auto;padding:34px 18px 80px}
+  header h1{font-size:25px;margin:0 0 8px}
+  header h1 .g{background:linear-gradient(90deg,var(--green),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--muted);margin:0;font-size:14px}
+  .tag{display:inline-block;font-family:var(--mono);font-size:11.5px;background:var(--panel2);
+    border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--green);margin:6px 6px 0 0}
+  .star{display:inline-block;background:rgba(63,185,80,.15);color:var(--green);border:1px solid var(--green);
+    border-radius:6px;font-size:12px;padding:2px 9px;margin-left:6px}
+  section{margin-top:38px}
+  h2{font-size:19px;border-left:4px solid var(--green);padding-left:11px;margin:0 0 4px}
+  h2 .n{font-family:var(--mono);color:var(--muted);font-size:14px;margin-right:4px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px;padding-left:15px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-top:12px}
+  code{font-family:var(--mono);font-size:.88em;color:var(--pink);background:var(--panel2);
+    border:1px solid var(--border);border-radius:5px;padding:1px 5px}
+  b.k{color:var(--text)}
+  pre{font-family:var(--mono);font-size:12px;background:#0b0e14;border:1px solid var(--border);
+    border-radius:9px;padding:12px 14px;overflow-x:auto;margin:0;color:#cdd3e0}
+  .cmt{color:#6e7681}
+  .callout{background:var(--panel2);border-left:3px solid var(--amber);border-radius:8px;padding:11px 15px;font-size:13px;color:var(--muted);margin-top:14px}
+  .callout b{color:var(--text)}
+  .pos{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .pos .chip{font-size:12px;padding:4px 11px;border-radius:99px;border:1px solid var(--border);background:var(--panel2);color:var(--muted)}
+  .pos .chip.cur{border-color:var(--green);color:var(--green);font-weight:700}
+
+  /* group sampling diagram */
+  .grp{margin-top:12px}
+  .qbox{background:var(--panel2);border:1px solid var(--accent);border-radius:9px;padding:9px 13px;text-align:center;font-size:13.5px;max-width:280px;margin:0 auto}
+  .down{text-align:center;color:var(--muted);font-size:18px;margin:4px 0}
+  .gens{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media(max-width:560px){.gens{grid-template-columns:1fr}}
+  .gen{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:8px 11px;font-size:12.5px}
+  .gen .ans{flex:1}
+  .gen .r{font-family:var(--mono);font-size:11.5px;padding:2px 7px;border-radius:6px;white-space:nowrap}
+  .r.hi{background:rgba(63,185,80,.15);color:var(--green)}
+  .r.lo{background:rgba(248,81,73,.13);color:var(--red)}
+  .adv{font-family:var(--mono);font-size:11.5px;padding:2px 7px;border-radius:6px;white-space:nowrap}
+  .adv.up{background:rgba(63,185,80,.15);color:var(--green)}
+  .adv.dn{background:rgba(248,81,73,.13);color:var(--red)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  th,td{text-align:left;padding:9px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .bars{margin-top:12px}
+  .barrow{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:12.5px}
+  .barrow .name{width:120px;color:var(--muted);flex-shrink:0}
+  .track{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:99px;height:18px;overflow:hidden}
+  .fill{height:100%;border-radius:99px}
+  .fill.before{background:#3a4151}
+  .fill.after{background:linear-gradient(90deg,var(--green),var(--cyan))}
+  .barrow .val{width:60px;text-align:right;font-family:var(--mono);color:var(--text);flex-shrink:0}
+  footer{margin-top:46px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--border);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🏆 <span class="g">GRPO / RLVR</span> 图解<span class="star">重中之重</span></h1>
+    <p>把 <code>agentic-rl/stage3_grpo.py</code> 讲清楚：用<b style="color:var(--text)">可验证奖励</b>做强化学习，DeepSeek-R1 同款路线。</p>
+    <div>
+      <span class="tag">可验证奖励 RLVR</span>
+      <span class="tag">组内归一化优势</span>
+      <span class="tag">无 reward model</span>
+      <span class="tag">无 critic 网络</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="n">0</span>位置：后训练的分水岭</h2>
+    <p class="sub">SFT 模仿、DPO 学相对好坏；GRPO 第一次<b style="color:var(--text)">直接奖励"答案对不对"</b>，让模型真正学会解题。</p>
+    <div class="panel">
+      <div class="pos">
+        <span class="chip">① SFT ✓</span><span class="chip">② DPO ✓</span>
+        <span class="chip cur">③ GRPO<br>学会推理</span>
+        <span class="chip">④ 工具RL</span>
+      </div>
+      <div class="callout">
+        <b>RLVR = Reinforcement Learning with Verifiable Rewards：</b>奖励来自<b>规则可验证</b>的信号
+        （答案对不对 + 格式对不对），<b>不需要训奖励模型</b>。当前最热、岗位最看重的一块。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">1</span>⭐ GRPO 的心脏：同题采一组，组内比好坏</h2>
+    <p class="sub">这是 GRPO 区别于 PPO 的关键——<b style="color:var(--text)">不用 critic/value 网络</b>，用"同组其他答案的平均分"当基准。</p>
+    <div class="panel">
+      <div class="grp">
+        <div class="qbox">问：17 + 25 = ?　<span style="color:var(--muted)">(答案 42)</span></div>
+        <div class="down">↓ 同一个 prompt 采样 G=6 个回答</div>
+        <div class="gens">
+          <div class="gen"><span class="ans">…\boxed{42}</span><span class="r hi">+1.3</span><span class="adv up">↑</span></div>
+          <div class="gen"><span class="ans">…= 42</span><span class="r hi">+1.0</span><span class="adv up">↑</span></div>
+          <div class="gen"><span class="ans">…\boxed{42}</span><span class="r hi">+1.3</span><span class="adv up">↑</span></div>
+          <div class="gen"><span class="ans">…大概是 40</span><span class="r lo">0.0</span><span class="adv dn">↓</span></div>
+          <div class="gen"><span class="ans">…等于 41</span><span class="r lo">0.0</span><span class="adv dn">↓</span></div>
+          <div class="gen"><span class="ans">…= 42</span><span class="r hi">+1.0</span><span class="adv up">↑</span></div>
+        </div>
+        <div class="down">↓ 组内归一化：advantage = (reward − 组均值) / 组标准差</div>
+        <div class="qbox" style="border-color:var(--green);max-width:420px">
+          高于平均的 → 优势为正 → <b style="color:var(--green)">提高这些回答里每个 token 的概率</b><br>
+          低于平均的 → 优势为负 → 压低
+        </div>
+      </div>
+      <div class="callout" style="border-color:var(--green)">
+        <b>为什么省了 critic？</b>PPO 要训一个价值网络来估"基准分"；GRPO 直接用
+        <b>同组样本的平均分</b>当基准 —— 一组里互相比，省掉一半网络。这正是你在玩具版里学的那行
+        <code>(r - mean) / std</code>，现在跑在真模型上。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>奖励从哪来：纯规则，可验证</h2>
+    <p class="sub">本例任务是简单算术。奖励 = 两条规则之和，<b style="color:var(--text)">一行代码就能判，不需要任何模型</b>。</p>
+    <div class="panel">
+      <table>
+        <tr><th>规则</th><th>判法</th><th>奖励</th></tr>
+        <tr><td>① 正确性</td><td><code>\boxed{}</code> 里(或文末)的数字 == 正确答案</td><td><b style="color:var(--green)">+1.0</b></td></tr>
+        <tr><td>② 格式</td><td>输出里出现 <code>\boxed{...}</code></td><td><b style="color:var(--green)">+0.3</b></td></tr>
+      </table>
+      <pre style="margin-top:12px"><span class="cmt"># TRL 接受一个 reward 函数列表, 自动采样/算组优势/更新</span>
+trainer = GRPOTrainer(model, args=cfg, train_dataset=dataset,
+                      reward_funcs=[reward_correct, reward_format],  <span class="cmt"># 两条可验证规则</span>
+                      processing_class=tok, peft_config=lora)
+<span class="cmt"># GRPOConfig: num_generations=G(组大小), beta=KL系数(拉住别跑偏), use_vllm=False(Mac)</span></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>训练效果（实测，本地 MPS）</h2>
+    <div class="panel">
+      <div class="bars">
+        <div class="barrow"><span class="name">正确率 (训练前)</span>
+          <div class="track"><div class="fill before" style="width:67%"></div></div><span class="val">67%</span></div>
+        <div class="barrow"><span class="name">正确率 (训练后)</span>
+          <div class="track"><div class="fill after" style="width:100%"></div></div><span class="val">100%</span></div>
+      </div>
+      <pre style="margin-top:12px">训练奖励(日志): 0.88 -> 1.04
+训练前: "The sum of 29 and 31 is 60..."
+训练后: "30 + 13 = 43. Therefore, the answer is 43."  <span class="cmt"># 更稳更准</span></pre>
+      <div class="callout" style="border-color:var(--green)">
+        奖励全来自可验证规则，GRPO 同题采多个、组内比好坏、强化好的 ——
+        这就是 <b>DeepSeek-R1 那条 RLVR 路线的最小真身</b>。把算术换成数学/代码题、加大规模，配方完全一样。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span>GRPO vs PPO vs DPO 一眼对比</h2>
+    <div class="panel">
+      <table>
+        <tr><th></th><th>要 critic 网络?</th><th>奖励来源</th><th>稳定性</th></tr>
+        <tr><td>PPO</td><td><span style="color:var(--red)">要</span></td><td>奖励模型</td><td>复杂</td></tr>
+        <tr><td>DPO</td><td>不要</td><td>成对偏好(离线)</td><td>易过优化(上一课)</td></tr>
+        <tr><td><b style="color:var(--green)">GRPO</b></td><td><b style="color:var(--green)">不要</b>(组内当基准)</td><td><b style="color:var(--green)">可验证规则</b></td><td>带 KL 约束, 较稳</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span>GRPO 之后呢？</h2>
+    <div class="panel">
+      <p style="margin:0;font-size:13.5px;color:var(--muted)">
+        GRPO 让模型学会"自己解题"。再进一步：很多任务模型<b class="k">单靠自己算不出来</b>（大数乘法、查资料），
+        得学会<b class="k">调用工具</b>。下一课把奖励接到一个<b class="k">真的执行工具</b>的系统上：</p>
+      <div class="pos" style="margin-top:10px">
+        <span class="chip">① SFT ✓</span><span class="chip">② DPO ✓</span><span class="chip cur">③ GRPO ✓</span>
+        <span class="chip">④ 工具RL：Reward System 真执行工具</span>
+      </div>
+      <p style="margin:12px 0 0;font-size:13px;color:var(--muted)">看 <code>stage4_agentic.html</code> →</p>
+    </div>
+  </section>
+
+  <footer>
+    配套 <code>agentic-rl/stage3_grpo.py</code> · 基座 Qwen2.5-0.5B-Instruct · 本地 Mac(MPS) + LoRA<br>
+    跑一遍：<code>cd agentic-rl &amp;&amp; python3 stage3_grpo.py</code>（冒烟：<code>MAX_STEPS=6 NUM_GEN=4 ...</code>）
+  </footer>
+
+</div>
+</body>
+</html>

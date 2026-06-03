@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DPO 图解 · stage2_dpo.py 是怎么回事</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --purple:#bc8cff; --pink:#f778ba; --cyan:#39c5cf;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75;}
+  .wrap{max-width:840px;margin:0 auto;padding:34px 18px 80px}
+  header h1{font-size:25px;margin:0 0 8px}
+  header h1 .g{background:linear-gradient(90deg,var(--purple),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--muted);margin:0;font-size:14px}
+  .tag{display:inline-block;font-family:var(--mono);font-size:11.5px;background:var(--panel2);
+    border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--purple);margin:6px 6px 0 0}
+  section{margin-top:38px}
+  h2{font-size:19px;border-left:4px solid var(--purple);padding-left:11px;margin:0 0 4px}
+  h2 .n{font-family:var(--mono);color:var(--muted);font-size:14px;margin-right:4px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px;padding-left:15px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-top:12px}
+  code{font-family:var(--mono);font-size:.88em;color:var(--pink);background:var(--panel2);
+    border:1px solid var(--border);border-radius:5px;padding:1px 5px}
+  b.k{color:var(--text)}
+  pre{font-family:var(--mono);font-size:12px;background:#0b0e14;border:1px solid var(--border);
+    border-radius:9px;padding:12px 14px;overflow-x:auto;margin:0;color:#cdd3e0}
+  .cmt{color:#6e7681}
+  .callout{background:var(--panel2);border-left:3px solid var(--amber);border-radius:8px;padding:11px 15px;font-size:13px;color:var(--muted);margin-top:14px}
+  .callout b{color:var(--text)}
+  .pos{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .pos .chip{font-size:12px;padding:4px 11px;border-radius:99px;border:1px solid var(--border);background:var(--panel2);color:var(--muted)}
+  .pos .chip.cur{border-color:var(--purple);color:var(--purple);font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  th,td{text-align:left;padding:9px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .pill{font-size:11px;padding:2px 9px;border-radius:99px;white-space:nowrap}
+  .pill.bad{background:rgba(248,81,73,.15);color:var(--red)}
+  .pill.ok{background:rgba(63,185,80,.15);color:var(--green)}
+
+  /* preference pair */
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media(max-width:560px){.pair{grid-template-columns:1fr}}
+  .opt{border-radius:11px;padding:13px 15px;border:1px solid;position:relative}
+  .opt.ch{background:rgba(63,185,80,.08);border-color:var(--green)}
+  .opt.rj{background:rgba(248,81,73,.07);border-color:var(--red)}
+  .opt .lab{font-size:12px;font-family:var(--mono)}
+  .opt.ch .lab{color:var(--green)} .opt.rj .lab{color:var(--red)}
+  .opt .txt{font-size:13px;margin-top:5px}
+  .opt .up{position:absolute;right:12px;top:11px;font-weight:700}
+  .opt.ch .up{color:var(--green)} .opt.rj .up{color:var(--red)}
+
+  /* bar chart */
+  .bars{margin-top:12px}
+  .barrow{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:12.5px}
+  .barrow .name{width:120px;color:var(--muted);flex-shrink:0}
+  .track{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:99px;height:18px;position:relative;overflow:hidden}
+  .fill{height:100%;border-radius:99px}
+  .fill.before{background:#3a4151}
+  .fill.after{background:linear-gradient(90deg,var(--purple),var(--green))}
+  .barrow .val{width:96px;text-align:right;font-family:var(--mono);color:var(--text);flex-shrink:0}
+  footer{margin-top:46px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--border);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>⚖️ <span class="g">DPO 偏好对齐</span> 图解</h1>
+    <p>把 <code>agentic-rl/stage2_dpo.py</code> 讲清楚：用"成对偏好"教模型——哪种答案更好。</p>
+    <div>
+      <span class="tag">无需 reward model</span>
+      <span class="tag">无需采样</span>
+      <span class="tag">一个分类式损失</span>
+      <span class="tag">RLHF 极简平替</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="n">0</span>位置：SFT 之后的第一步对齐</h2>
+    <p class="sub">SFT 只会模仿"标准答案"，但不知道"两个答案哪个更好"。DPO 来补这一课。</p>
+    <div class="panel">
+      <div class="pos">
+        <span class="chip">① SFT ✓<br>会按指令答</span>
+        <span class="chip cur">② DPO<br>对齐偏好</span>
+        <span class="chip">③ GRPO<br>学会推理</span>
+        <span class="chip">④ 工具RL<br>学会做事</span>
+      </div>
+      <div class="callout">
+        <b>一句话：</b>给模型看很多对 (好答案 chosen / 差答案 rejected)，
+        让它<b>提高 chosen 的相对概率、压低 rejected 的</b>。不用训奖励模型、不用采样，所以好懂好跑。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">1</span>核心：一对一对地"抬高好的、压低坏的"</h2>
+    <p class="sub">本例教的偏好是【简洁 > 啰嗦】：同一个问题，chosen 一句话，rejected 又臭又长。</p>
+    <div class="panel">
+      <div style="font-size:13px;color:var(--muted)">问：什么是光合作用？</div>
+      <div class="pair">
+        <div class="opt ch"><span class="up">↑ 抬高</span><div class="lab">chosen（简洁）</div>
+          <div class="txt">植物把光能转化为化学能的过程。</div></div>
+        <div class="opt rj"><span class="up">↓ 压低</span><div class="lab">rejected（啰嗦）</div>
+          <div class="txt">这是一个非常好的问题，让我来详细全面地解释一下，光合作用其实是个相当复杂而有趣的过程……（一大段）</div></div>
+      </div>
+      <div class="callout" style="border-color:var(--purple)">
+        DPO 的损失直觉：让 <code>log[π(chosen)/π_ref(chosen)]</code> 比
+        <code>log[π(rejected)/π_ref(rejected)]</code> <b>更大</b>。
+        <code>beta</code> 控制偏离参考模型的力度（越大越贴紧、越不容易跑飞）。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>DPO 为什么比经典 RLHF 简单</h2>
+    <p class="sub">同样是"对齐人类偏好"，DPO 把 RLHF 的三步压成一步。</p>
+    <div class="panel">
+      <table>
+        <tr><th></th><th>经典 RLHF (PPO)</th><th>DPO</th></tr>
+        <tr><td>奖励模型</td><td>要先训一个 RM</td><td><b style="color:var(--green)">不需要</b></td></tr>
+        <tr><td>在线采样</td><td>要让模型不断生成再打分</td><td><b style="color:var(--green)">不需要</b></td></tr>
+        <tr><td>训练形态</td><td>强化学习(PPO，复杂)</td><td><b style="color:var(--green)">一个分类式损失</b></td></tr>
+        <tr><td>参考模型</td><td>需要</td><td>需要（用 LoRA 时 = 关掉适配器的基座，省一份）</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>核心代码：真就一个 Trainer</h2>
+    <div class="panel">
+      <pre><span class="cmt"># 数据：每条是 (prompt, chosen, rejected) 三元组</span>
+{"prompt":[{"role":"user","content":q}],
+ "chosen":  [{"role":"assistant","content":<span style="color:#9be8b8">简洁答案</span>}],
+ "rejected":[{"role":"assistant","content":<span style="color:#f5a3a0">啰嗦答案</span>}]}
+
+cfg = DPOConfig(beta=<span class="cmt">0.3</span>, learning_rate=<span class="cmt">1e-5</span>, num_train_epochs=<span class="cmt">2</span>, ...)
+trainer = DPOTrainer(model, args=cfg, train_dataset=dataset,
+                     processing_class=tok, peft_config=lora)  <span class="cmt"># peft → 参考模型自动=关适配器的基座</span>
+trainer.train()</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span>怎么看它学没学会（实测）</h2>
+    <p class="sub">⚠️ 别用"自由生成"评测（容易被生成退化干扰）。直接看 TRL 日志里 DPO 真正在优化的两个量：</p>
+    <div class="panel">
+      <div class="bars">
+        <div class="barrow"><span class="name">偏好间隔 margins</span>
+          <div class="track"><div class="fill before" style="width:8%"></div></div><span class="val">+0.10</span></div>
+        <div class="barrow"><span class="name">↓ 训练后</span>
+          <div class="track"><div class="fill after" style="width:95%"></div></div><span class="val">+1.14</span></div>
+        <div class="barrow" style="margin-top:14px"><span class="name">判对率 accuracy</span>
+          <div class="track"><div class="fill before" style="width:50%"></div></div><span class="val">50%</span></div>
+        <div class="barrow"><span class="name">↓ 训练后</span>
+          <div class="track"><div class="fill after" style="width:100%"></div></div><span class="val">100%</span></div>
+      </div>
+      <div class="callout" style="border-color:var(--green)">
+        <b>margins</b> = chosen 的隐式奖励 − rejected 的，变大 = 越偏好 chosen；
+        <b>accuracy</b> = 判对"chosen 比 rejected 好"的比例 → 100%。
+        没用奖励模型、没采样，只用成对偏好 + 一个损失 —— <b>这就是 DPO。</b>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span>真踩过的坑：DPO 极易"过优化翻车"</h2>
+    <p class="sub">DPO 出了名的敏感——它一边抬 chosen 一边压 rejected，用力过猛会把整体概率压垮。</p>
+    <div class="panel">
+      <table>
+        <tr><th>配置</th><th>结果</th><th>训练后生成</th></tr>
+        <tr><td>6轮 / lr 5e-5 / beta 0.1</td><td><span class="pill bad">崩</span></td><td>天/T/T/T/T/T…（退化乱码）</td></tr>
+        <tr><td><b>2轮 / lr 1e-5 / beta 0.3</b></td><td><span class="pill ok">稳</span></td><td>正常，margins/accuracy 正常上升</td></tr>
+      </table>
+      <div class="callout">
+        <b>解法：</b>lr 调小、轮数减少、<b>beta 调大</b>（更贴紧参考模型）。
+        正因为 DPO 这种脾气，业界后来更偏向用 GRPO 那种带 KL 约束、信号更稳的方式 —— 下一课。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">6</span>DPO 之后呢？</h2>
+    <div class="panel">
+      <p style="margin:0;font-size:13.5px;color:var(--muted)">
+        DPO 用"现成的成对偏好"对齐，但偏好数据要人去标，而且它学的是"相对好坏"、<b class="k">不直接优化"答案对不对"</b>。
+        下一步用<b class="k">可验证奖励</b>（答案对不对、能不能跑通）直接做 RL：</p>
+      <div class="pos" style="margin-top:10px">
+        <span class="chip">① SFT ✓</span><span class="chip cur">② DPO ✓</span>
+        <span class="chip">③ GRPO：可验证奖励学解题</span>
+        <span class="chip">④ 工具RL</span>
+      </div>
+      <p style="margin:12px 0 0;font-size:13px;color:var(--muted)">看 <code>stage3_grpo.html</code> →</p>
+    </div>
+  </section>
+
+  <footer>
+    配套 <code>agentic-rl/stage2_dpo.py</code> · 基座 Qwen2.5-0.5B-Instruct · 本地 Mac(MPS) + LoRA<br>
+    跑一遍：<code>cd agentic-rl &amp;&amp; python3 stage2_dpo.py</code>
+  </footer>
+
+</div>
+</body>
+</html>

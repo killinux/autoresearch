@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工具调用 RL 图解 · stage4_agentic.py 是怎么回事</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --purple:#bc8cff; --pink:#f778ba; --cyan:#39c5cf;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75;}
+  .wrap{max-width:840px;margin:0 auto;padding:34px 18px 80px}
+  header h1{font-size:25px;margin:0 0 8px}
+  header h1 .g{background:linear-gradient(90deg,var(--amber),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--muted);margin:0;font-size:14px}
+  .tag{display:inline-block;font-family:var(--mono);font-size:11.5px;background:var(--panel2);
+    border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--amber);margin:6px 6px 0 0}
+  section{margin-top:38px}
+  h2{font-size:19px;border-left:4px solid var(--amber);padding-left:11px;margin:0 0 4px}
+  h2 .n{font-family:var(--mono);color:var(--muted);font-size:14px;margin-right:4px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px;padding-left:15px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-top:12px}
+  code{font-family:var(--mono);font-size:.88em;color:var(--pink);background:var(--panel2);
+    border:1px solid var(--border);border-radius:5px;padding:1px 5px}
+  b.k{color:var(--text)}
+  pre{font-family:var(--mono);font-size:12px;background:#0b0e14;border:1px solid var(--border);
+    border-radius:9px;padding:12px 14px;overflow-x:auto;margin:0;color:#cdd3e0}
+  .cmt{color:#6e7681}
+  .callout{background:var(--panel2);border-left:3px solid var(--amber);border-radius:8px;padding:11px 15px;font-size:13px;color:var(--muted);margin-top:14px}
+  .callout b{color:var(--text)}
+  .callout.warn{border-color:var(--red)}
+  .pos{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .pos .chip{font-size:12px;padding:4px 11px;border-radius:99px;border:1px solid var(--border);background:var(--panel2);color:var(--muted)}
+  .pos .chip.cur{border-color:var(--amber);color:var(--amber);font-weight:700}
+
+  /* tool flow */
+  .flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center;margin-top:12px}
+  .node{flex:1;min-width:120px;border-radius:11px;padding:12px 10px;text-align:center;border:1px solid}
+  .node .t{font-weight:700;font-size:13px}
+  .node .d{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .n-q{border-color:var(--border);background:var(--panel2)}
+  .n-m{border-color:var(--accent);background:rgba(88,166,255,.08)} .n-m .t{color:var(--accent)}
+  .n-tool{border-color:var(--amber);background:rgba(210,153,34,.1)} .n-tool .t{color:var(--amber)}
+  .n-r{border-color:var(--green);background:rgba(63,185,80,.1)} .n-r .t{color:var(--green)}
+  .arrow{color:var(--muted);font-size:19px;padding:0 5px}
+  @media(max-width:640px){.flow{flex-direction:column}.arrow{transform:rotate(90deg)}}
+
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media(max-width:560px){.ba{grid-template-columns:1fr}}
+  .bcard{border-radius:11px;padding:13px 15px;border:1px solid}
+  .b0{background:rgba(248,81,73,.06);border-color:var(--red)}
+  .b1{background:rgba(63,185,80,.08);border-color:var(--green)}
+  .bcard .ti{font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .bcard .ans{font-size:13px;margin-top:6px;font-family:var(--mono)}
+  .grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  @media(max-width:560px){.grid4{grid-template-columns:1fr}}
+  .ic{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .ic .h{font-weight:700;font-size:13.5px}
+  .ic .d{color:var(--muted);font-size:12px;margin-top:4px}
+  footer{margin-top:46px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--border);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🛠️ <span class="g">工具调用 RL + Reward System</span> 图解</h1>
+    <p>把 <code>agentic-rl/stage4_agentic.py</code> 讲清楚：让模型学会"不会算就调工具"，奖励来自<b style="color:var(--text)">真的执行工具</b>。</p>
+    <div>
+      <span class="tag">Reward System</span>
+      <span class="tag">工具调用 RL</span>
+      <span class="tag">沙箱执行</span>
+      <span class="tag">可验证防作弊</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="n">0</span>位置：从"会解题"到"会做事"</h2>
+    <p class="sub">GRPO 让模型自己解题，但很多任务它<b style="color:var(--text)">单靠脑子算不出来</b>——得学会调用外部工具。</p>
+    <div class="panel">
+      <div class="pos">
+        <span class="chip">① SFT ✓</span><span class="chip">② DPO ✓</span><span class="chip">③ GRPO ✓</span>
+        <span class="chip cur">④ 工具RL<br>学会做事</span>
+      </div>
+      <div class="callout">
+        <b>对应学习计划阶段4（最对口工业岗）：</b>从"单纯生成"走向"调用工具完成任务"，
+        奖励来自一个<b>真正执行工具</b>的 Reward System（代码/工具方向：ToRL / ReTool / CodeRL）。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">1</span>任务：两位数乘法——模型心算必错</h2>
+    <p class="sub">0.5B 模型心算 <code>47 × 83</code> 几乎一定错。正解不是硬算，而是<b style="color:var(--text)">把算式交给工具</b>。</p>
+    <div class="panel">
+      <div class="flow">
+        <div class="node n-q"><div class="t">问</div><div class="d">47 × 83 = ?</div></div>
+        <div class="arrow">→</div>
+        <div class="node n-m"><div class="t">模型输出</div><div class="d">&lt;calc&gt;47*83&lt;/calc&gt;</div></div>
+        <div class="arrow">→</div>
+        <div class="node n-tool"><div class="t">🛠️ 工具执行</div><div class="d">sandbox 真的 eval</div></div>
+        <div class="arrow">→</div>
+        <div class="node n-r"><div class="t">奖励</div><div class="d">3901 == 答案 → +1</div></div>
+      </div>
+      <div class="callout" style="border-color:var(--amber)">
+        奖励函数会<b>真的取出 <code>&lt;calc&gt;</code> 里的表达式、在受限沙箱里执行</b>，再拿结果判对错。
+        于是 GRPO 逼着模型学会"遇到不会算的就写算式调工具"，而不是瞎猜 —— 这就是工具调用 RL 的内核。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>奖励 = 真的跑工具（Reward System）</h2>
+    <div class="panel">
+      <pre><span class="cmt"># Reward System 核心: 取 &lt;calc&gt; 里的表达式, 白名单校验后真的执行</span>
+def run_tool(text):
+    expr = re.search(r"&lt;calc&gt;(.*?)&lt;/calc&gt;", text).group(1)
+    if not re.fullmatch(r"[\d\s+\-*/().]+", expr):   <span class="cmt"># 只允许算术, 防执行任意代码</span>
+        return None
+    return eval(expr, {"__builtins__":{}}, {})       <span class="cmt"># ← 真的算</span>
+
+reward_tool_correct  <span class="cmt"># 工具结果 == 正确答案  -> +1.0</span>
+reward_used_tool     <span class="cmt"># 用了 &lt;calc&gt;...&lt;/calc&gt;  -> +0.3</span></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>训练效果：学会"写干净可执行的算式"</h2>
+    <p class="sub">最妙的细节——GRPO 不只让它用工具，还把工具调用<b style="color:var(--text)">格式</b>掰对了。</p>
+    <div class="panel">
+      <div class="ba">
+        <div class="bcard b0"><div class="ti">训练前</div>
+          <div class="ans">&lt;calc&gt;53 * 35 = 1855&lt;/calc&gt;</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">带了 "= 1855"，工具<b style="color:var(--red)">无法执行</b>(白名单拒绝) → 不得分</div></div>
+        <div class="bcard b1"><div class="ti">训练后</div>
+          <div class="ans">&lt;calc&gt;92 * 25&lt;/calc&gt;</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">干净表达式 → 工具算出 2300 → <b style="color:var(--green)">得分</b></div></div>
+      </div>
+      <div class="callout" style="border-color:var(--green)">
+        正确率 <b>75% → 100%</b>。模型被"奖励=真执行工具"逼着学会了写
+        <b>工具能真正跑起来的格式</b>——这是死的指令教不会、只能靠 RL 试出来的。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span>奖励设计的坑：可验证 = 天然防作弊</h2>
+    <div class="panel">
+      <div class="callout">
+        想靠"在 <code>&lt;calc&gt;</code> 里直接写答案数字"蒙混？它得<b>先知道答案</b>——可两位数乘法它不会，
+        所以唯一稳定拿分的办法就是<b>写出真实算式 a*b 交给工具</b>。
+        这正是计划阶段4 强调的「<b>代码题不能靠 print 答案绕过单测</b>」——
+        <b style="color:var(--text)">可验证、难作弊的奖励，是 Agentic RL 的胜负手</b>。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span>这个小例子 ↔ 工业 Agentic RL Infra 四大件</h2>
+    <p class="sub">verl / OpenRLHF 再大，骨架也是这四块。一个 ~120 行的例子就缩微齐了。</p>
+    <div class="panel">
+      <div class="grid4">
+        <div class="ic"><div class="h">🎲 Rollout 采样</div><div class="d">同题采 G 个回答（工业用 vLLM；本地用 transformers）</div></div>
+        <div class="ic"><div class="h">✅ Reward System</div><div class="d">规则 / <b style="color:var(--text)">沙箱执行</b> / LLM-judge。本例 = <code>run_tool()</code> 真 eval</div></div>
+        <div class="ic"><div class="h">🔧 训练</div><div class="d">GRPO 组优势更新（本例 GRPOTrainer + LoRA）</div></div>
+        <div class="ic"><div class="h">🎛️ 编排</div><div class="d">把采样→打分→更新串成循环（verl 的 HybridFlow）</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">6</span>⚠️ 诚实边界：这是"单轮"，真·多轮要 verl</h2>
+    <div class="panel">
+      <div class="flow">
+        <div class="node n-m" style="flex:none;min-width:0;padding:8px 12px"><div class="t">单轮(本例)</div><div class="d">生成一次 → 执行 → 打分</div></div>
+        <div class="arrow">vs</div>
+        <div class="node n-tool" style="flex:none;min-width:0;padding:8px 12px"><div class="t">多轮(真 Agentic)</div><div class="d">看到工具返回 → 再思考 → 再调用 → …</div></div>
+      </div>
+      <div class="callout warn">
+        TRL 的 GRPO 是<b>单轮</b>（生成一次就打分）。真正的<b>多轮 Agentic</b>（模型看到工具返回结果后
+        继续思考、再调用）需要自定义 rollout 循环 / 工业框架 <b>verl</b>（reward manager、sandbox、
+        multi-turn rollout）。本例抓住了最核心的「<b>奖励 = 执行工具</b>」这一点，多轮留作下一步上 verl。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">7</span>四阶段走完了</h2>
+    <div class="panel">
+      <div class="pos">
+        <span class="chip">① SFT ✓ 会答</span><span class="chip">② DPO ✓ 对齐</span>
+        <span class="chip">③ GRPO ✓ 解题</span><span class="chip cur">④ 工具RL ✓ 做事</span>
+      </div>
+      <p style="margin:12px 0 0;font-size:13px;color:var(--muted)">
+        这就是后训练主线 <b class="k">SFT → DPO → GRPO → Agentic</b> 的最小可跑实战。
+        再往上：多轮 Agentic、复现 nano-aha-moment / TinyZero、上 verl —— 都需要 GPU，见 <code>README.md</code>。</p>
+    </div>
+  </section>
+
+  <footer>
+    配套 <code>agentic-rl/stage4_agentic.py</code> · 基座 Qwen2.5-0.5B-Instruct · 本地 Mac(MPS) + LoRA<br>
+    跑一遍：<code>cd agentic-rl &amp;&amp; python3 stage4_agentic.py</code>
+  </footer>
+
+</div>
+</body>
+</html>

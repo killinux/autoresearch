@@ -10,12 +10,15 @@
 
 ## 阶段 ↔ 脚本
 
-| 计划阶段 | 脚本 | 用到的 TRL | 这一步教什么 / 跑出来看什么 |
-|---|---|---|---|
-| 阶段1 **SFT** | [`stage1_sft.py`](stage1_sft.py) | `SFTTrainer` | 指令微调、**loss masking**（prompt 不算 loss）。学一个"简洁中文+喵~"风格 |
-| 阶段2 **DPO** | [`stage2_dpo.py`](stage2_dpo.py) | `DPOTrainer` | 偏好对齐，无需 reward model。学"简洁优于啰嗦"，看 `margins↑ / accuracy→100%` |
-| 阶段3 **GRPO/RLVR** ⭐ | [`stage3_grpo.py`](stage3_grpo.py) | `GRPOTrainer` | **重中之重**：可验证奖励（答案对不对+格式）。算术正确率↑ |
-| 阶段4 **工具调用 RL** | [`stage4_agentic.py`](stage4_agentic.py) | `GRPOTrainer` | Reward System **真的执行工具**(`<calc>`)。学会"不会算就调工具" |
+| 计划阶段 | 脚本 | 图解(H5) | 用到的 TRL | 这一步教什么 / 跑出来看什么 |
+|---|---|---|---|---|
+| 阶段1 **SFT** | [`stage1_sft.py`](stage1_sft.py) | [📊 图解](stage1_sft.html) | `SFTTrainer` | 指令微调、**loss masking**（prompt 不算 loss）。学一个"简洁中文+喵~"风格 |
+| 阶段2 **DPO** | [`stage2_dpo.py`](stage2_dpo.py) | [📊 图解](stage2_dpo.html) | `DPOTrainer` | 偏好对齐，无需 reward model。学"简洁优于啰嗦"，看 `margins↑ / accuracy→100%` |
+| 阶段3 **GRPO/RLVR** ⭐ | [`stage3_grpo.py`](stage3_grpo.py) | [📊 图解](stage3_grpo.html) | `GRPOTrainer` | **重中之重**：可验证奖励（答案对不对+格式）。算术正确率↑ |
+| 阶段4 **工具调用 RL** | [`stage4_agentic.py`](stage4_agentic.py) | [📊 图解](stage4_agentic.html) | `GRPOTrainer` | Reward System **真的执行工具**(`<calc>`)。学会"不会算就调工具" |
+
+> 💡 每个阶段都配了一个**手机也好看的 H5 图解页**（`stageN_*.html`），用浏览器打开即可——
+> 含 loss masking / 组采样 / 工具执行流程等可视化，比读代码更快建立直觉。
 
 > **阶段0 地基**（nanoGPT、RL 概念、读 InstructGPT）是阅读/概念，无脚本。
 
