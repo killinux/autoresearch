@@ -11,7 +11,8 @@ SFT 是后训练第一步: 用"指令->高质量回答"的成对数据做监督�
 本脚本为本地 Mac(MPS) 跑通做的取舍:
   - LoRA: 只训小适配器、冻结基座 -> 省显存、快
   - 极小自造数据集(教模型用固定中文风格回答) + 少量步数 -> 秒级看到 loss 下降
-  - assistant_only_loss=True: 演示 loss masking(只在"回答"部分算损失, 不在"问题"上算)
+  - prompt-completion 格式: 演示 loss masking(只在"回答"部分算损失, 不在"问题"上算;
+    Qwen 模板不含 {% generation %}, 所以用这种格式而非 assistant_only_loss)
 
 运行: cd agentic-rl && python3 stage1_sft.py
 """
@@ -100,5 +101,5 @@ trainer.train()
 
 print("\n===== SFT 训练后 =====")
 print(f"问: {TEST_Q}\n答: {sample(TEST_Q)}")
-print("\n要点: SFT 用'指令->回答'成对数据做监督学习; assistant_only_loss 让损失只算在回答上")
+print("\n要点: SFT 用'指令->回答'成对数据做监督学习; prompt-completion 格式让损失只算在回答上")
 print("      (loss masking)。几步 LoRA 后, 模型已沾上'简洁中文 + 喵~'的风格 —— 这就是 SFT。")

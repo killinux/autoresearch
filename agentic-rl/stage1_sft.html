@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SFT 图解 · stage1_sft.py 是怎么回事</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --purple:#bc8cff; --pink:#f778ba; --cyan:#39c5cf;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.75;}
+  .wrap{max-width:840px;margin:0 auto;padding:34px 18px 80px}
+  header h1{font-size:25px;margin:0 0 8px}
+  header h1 .g{background:linear-gradient(90deg,var(--accent),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--muted);margin:0;font-size:14px}
+  .tag{display:inline-block;font-family:var(--mono);font-size:11.5px;background:var(--panel2);
+    border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--accent);margin:6px 6px 0 0}
+  section{margin-top:38px}
+  h2{font-size:19px;border-left:4px solid var(--accent);padding-left:11px;margin:0 0 4px}
+  h2 .n{font-family:var(--mono);color:var(--muted);font-size:14px;margin-right:4px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px;padding-left:15px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-top:12px}
+  code{font-family:var(--mono);font-size:.88em;color:var(--pink);background:var(--panel2);
+    border:1px solid var(--border);border-radius:5px;padding:1px 5px}
+  b.k{color:var(--text)}
+  pre{font-family:var(--mono);font-size:12px;background:#0b0e14;border:1px solid var(--border);
+    border-radius:9px;padding:12px 14px;overflow-x:auto;margin:0;color:#cdd3e0}
+  .cmt{color:#6e7681}
+  .hl{color:var(--green)} .hlo{color:var(--amber)} .hlb{color:var(--accent)}
+
+  /* pipeline */
+  .flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center}
+  .stp{flex:1;min-width:120px;background:var(--panel2);border:1px solid var(--border);border-radius:11px;
+    padding:12px 10px;text-align:center}
+  .stp .t{font-weight:700;font-size:14px;margin-bottom:2px}
+  .stp .d{color:var(--muted);font-size:11.5px}
+  .stp.on{border-color:var(--accent)} .stp.on .t{color:var(--accent)}
+  .arrow{color:var(--muted);font-size:20px;padding:0 5px}
+  @media(max-width:640px){.flow{flex-direction:column}.arrow{transform:rotate(90deg)}}
+
+  /* token chips for loss masking */
+  .toks{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
+  .tk{font-family:var(--mono);font-size:12px;padding:5px 9px;border-radius:7px;border:1px solid}
+  .tk.mask{background:rgba(139,148,158,.12);border-color:var(--border);color:var(--muted)}
+  .tk.loss{background:rgba(63,185,80,.13);border-color:var(--green);color:#9be8b8}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;margin-top:8px}
+  .legend span{display:flex;align-items:center;gap:6px;color:var(--muted)}
+  .sw{width:14px;height:14px;border-radius:4px;border:1px solid}
+  .sw.mask{background:rgba(139,148,158,.12);border-color:var(--border)}
+  .sw.loss{background:rgba(63,185,80,.13);border-color:var(--green)}
+
+  /* lora diagram */
+  .lora{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
+  .frozen{flex:2;min-width:200px;background:rgba(139,148,158,.08);border:2px dashed var(--border);
+    border-radius:12px;padding:18px;text-align:center}
+  .frozen .t{font-weight:700;color:var(--muted)}
+  .frozen .d{font-size:12px;color:var(--muted);margin-top:4px}
+  .adapter{flex:1;min-width:130px;background:rgba(63,185,80,.1);border:2px solid var(--green);
+    border-radius:12px;padding:18px;text-align:center}
+  .adapter .t{font-weight:700;color:var(--green)}
+  .adapter .d{font-size:12px;color:var(--muted);margin-top:4px}
+
+  /* before/after */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media(max-width:560px){.ba{grid-template-columns:1fr}}
+  .bcard{border-radius:11px;padding:14px 16px;border:1px solid}
+  .b0{background:rgba(139,148,158,.07);border-color:var(--border)}
+  .b1{background:rgba(63,185,80,.08);border-color:var(--green)}
+  .bcard .ti{font-size:12.5px;color:var(--muted);font-family:var(--mono)}
+  .bcard .ans{font-size:15px;margin-top:6px}
+  .b1 .ans b{color:var(--green)}
+
+  /* knob table */
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  th,td{text-align:left;padding:9px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .pill{font-size:11px;padding:2px 9px;border-radius:99px;white-space:nowrap}
+  .pill.bad{background:rgba(248,81,73,.15);color:var(--red)}
+  .pill.weak{background:rgba(210,153,34,.15);color:var(--amber)}
+  .pill.ok{background:rgba(63,185,80,.15);color:var(--green)}
+
+  .callout{background:var(--panel2);border-left:3px solid var(--amber);border-radius:8px;
+    padding:11px 15px;font-size:13px;color:var(--muted);margin-top:14px}
+  .callout b{color:var(--text)}
+  .pos{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .pos .chip{font-size:12px;padding:4px 11px;border-radius:99px;border:1px solid var(--border);background:var(--panel2);color:var(--muted)}
+  .pos .chip.cur{border-color:var(--accent);color:var(--accent);font-weight:700}
+  footer{margin-top:46px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--border);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🎓 <span class="g">SFT 监督微调</span> 图解</h1>
+    <p>把 <code>agentic-rl/stage1_sft.py</code> 讲清楚：用"问→答"对，教 Qwen2.5-0.5B "按指令好好回答"。</p>
+    <div>
+      <span class="tag">监督学习(还不是RL)</span>
+      <span class="tag">loss masking</span>
+      <span class="tag">chat template</span>
+      <span class="tag">LoRA</span>
+    </div>
+  </header>
+
+  <!-- 定位 -->
+  <section>
+    <h2><span class="n">0</span>SFT 在整条后训练线里的位置</h2>
+    <p class="sub">SFT 是<b style="color:var(--text)">第一步</b>，也是唯一一步"监督学习"；后面三步才是强化学习。</p>
+    <div class="panel">
+      <div class="pos">
+        <span class="chip">Base 模型<br>(会续写不听话)</span>
+        <span class="chip cur">① SFT<br>会按指令答</span>
+        <span class="chip">② DPO<br>对齐偏好</span>
+        <span class="chip">③ GRPO<br>学会推理</span>
+        <span class="chip">④ 工具RL<br>学会做事</span>
+      </div>
+      <div class="callout">
+        <b>一句话：</b>SFT 用"指令 → 高质量回答"的成对数据做监督学习，让模型学会"回答的格式与口吻"。
+        它决定<b>格式下限</b>，但<b>学不会没见过的推理</b> —— 这正是后面要上 RL 的原因。
+      </div>
+    </div>
+  </section>
+
+  <!-- 数据 -->
+  <section>
+    <h2><span class="n">1</span>喂什么数据：成对的"问 → 答"</h2>
+    <p class="sub">本例故意教一个鲜明风格——<b style="color:var(--text)">简洁中文 + 结尾"喵~"</b>，几步就能肉眼看出 SFT 起效。</p>
+    <div class="panel">
+      <pre><span class="cmt"># 16 条这样的成对数据(节选)</span>
+("地球有几个月亮?",  "地球只有一个月亮，<span class="hl">喵~</span>")
+("法国的首都是哪?",  "法国的首都是巴黎，<span class="hl">喵~</span>")
+("鲸鱼是鱼吗?",      "不是，鲸鱼是哺乳动物，<span class="hl">喵~</span>")
+("企鹅会飞吗?",      "不会，企鹅不会飞，<span class="hl">喵~</span>")</pre>
+      <div class="callout" style="border-color:var(--accent)">
+        <b>为什么用 16 条而不是 3 条？</b>数据太少模型会"死记硬背"那几条然后崩掉；
+        多给几条同风格的，模型才学到<b>"结尾加喵~"这个模式</b>，能用到没见过的新问题上。
+      </div>
+    </div>
+  </section>
+
+  <!-- chat template -->
+  <section>
+    <h2><span class="n">2</span>chat template：把消息套成模型认识的格式</h2>
+    <p class="sub">聊天模型不是直接吃纯文本，而是吃带"角色标记"的对话模板。TRL 会自动套。</p>
+    <div class="panel">
+      <pre>{"role":"user","content":"月亮绕着什么转?"}        <span class="cmt"># 你写的</span>
+        │  apply_chat_template
+        ▼
+<span class="hlb">&lt;|im_start|&gt;user</span>
+月亮绕着什么转?<span class="hlb">&lt;|im_end|&gt;</span>
+<span class="hl">&lt;|im_start|&gt;assistant</span>          <span class="cmt"># ← 模型从这里开始"接话"</span></pre>
+      <p style="font-size:13px;color:var(--muted);margin:10px 0 0">
+        代码里 <code>add_generation_prompt=True</code> 就是补上最后那行
+        <code>&lt;|im_start|&gt;assistant</code>，告诉模型"轮到你答了"。</p>
+    </div>
+  </section>
+
+  <!-- loss masking -->
+  <section>
+    <h2><span class="n">3</span>⭐ loss masking：只在"回答"上算损失</h2>
+    <p class="sub">这是阶段1 最该懂的点。你要教的是"怎么回答"，不是"怎么复述问题"。</p>
+    <div class="panel">
+      <p style="font-size:13.5px;margin:0 0 4px">把整句话切成 token，<b class="k">灰色的问题部分被屏蔽(标 -100)不算 loss</b>，只在<b style="color:var(--green)">绿色的回答部分</b>算：</p>
+      <div class="toks">
+        <span class="tk mask">月亮</span><span class="tk mask">绕着</span><span class="tk mask">什么</span><span class="tk mask">转</span><span class="tk mask">?</span>
+        <span class="tk loss">月亮</span><span class="tk loss">绕着</span><span class="tk loss">地球</span><span class="tk loss">转</span><span class="tk loss">，</span><span class="tk loss">喵</span><span class="tk loss">~</span>
+      </div>
+      <div class="legend">
+        <span><i class="sw mask"></i>问题 prompt — 不算 loss (-100)</span>
+        <span><i class="sw loss"></i>回答 completion — 算 loss</span>
+      </div>
+      <div class="callout">
+        代码里用 <b>prompt-completion 格式</b>的数据集，TRL 自动把 prompt 部分置 <code>-100</code>、
+        只在 completion 上算损失 —— 这就是 loss masking，<b>不需要</b>模板带 <code>{% generation %}</code> 标记。
+      </div>
+    </div>
+  </section>
+
+  <!-- LoRA -->
+  <section>
+    <h2><span class="n">4</span>LoRA：冻结大模型，只训一小块</h2>
+    <p class="sub">为什么本地 Mac 也能微调 5 亿参数的模型？因为我们根本不动那 5 亿。</p>
+    <div class="panel">
+      <div class="lora">
+        <div class="frozen"><div class="t">🔒 Qwen2.5-0.5B 基座</div><div class="d">5 亿参数 · 全部冻结<br>不参与训练</div></div>
+        <div class="arrow">+</div>
+        <div class="adapter"><div class="t">🔧 LoRA 适配器</div><div class="d">只有几百万参数<br>只训这个</div></div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:12px 0 0">
+        代码：<code>LoraConfig(r=16, target_modules=["q_proj","k_proj","v_proj","o_proj"])</code> ——
+        只在注意力的 4 个投影矩阵旁挂小适配器。<b class="k">省显存、快、不易把模型练崩</b>，是本地能跑的关键。</p>
+    </div>
+  </section>
+
+  <!-- pipeline -->
+  <section>
+    <h2><span class="n">5</span>整条训练流程</h2>
+    <div class="panel">
+      <div class="flow">
+        <div class="stp on"><div class="t">问→答 16条</div><div class="d">prompt-completion</div></div>
+        <div class="arrow">→</div>
+        <div class="stp"><div class="t">套 chat 模板</div><div class="d">+ loss masking</div></div>
+        <div class="arrow">→</div>
+        <div class="stp on"><div class="t">SFTTrainer</div><div class="d">只更新 LoRA</div></div>
+        <div class="arrow">→</div>
+        <div class="stp"><div class="t">会"喵~"的模型</div><div class="d">学到了风格</div></div>
+      </div>
+      <pre style="margin-top:14px"><span class="cmt"># 核心就这一句(TRL 把采样/mask/反向传播都包好了)</span>
+trainer = SFTTrainer(model=model, args=cfg,
+                     train_dataset=dataset,
+                     processing_class=tok,     <span class="cmt"># trl 0.24 新名字(旧版叫 tokenizer)</span>
+                     peft_config=lora)         <span class="cmt"># 挂 LoRA</span>
+trainer.train()</pre>
+    </div>
+  </section>
+
+  <!-- before/after -->
+  <section>
+    <h2><span class="n">6</span>训练前 → 训练后（实测）</h2>
+    <p class="sub">测试题 <code>月亮绕着什么转?</code> <b style="color:var(--text)">没在 16 条训练集里</b>，能看出风格说明学到的是"模式"不是死记。</p>
+    <div class="ba">
+      <div class="bcard b0">
+        <div class="ti">训练前 (base)</div>
+        <div class="ans">月亮绕着地球转。</div>
+      </div>
+      <div class="bcard b1">
+        <div class="ti">训练后 (SFT)</div>
+        <div class="ans">月亮绕着地球转，<b>喵~</b></div>
+      </div>
+    </div>
+    <div class="callout" style="border-color:var(--green)">
+      没改一行模型结构，只用 16 条"问→答" + loss masking 训了几步 LoRA，
+      模型就稳定沾上了"简洁中文 + 喵~"的风格，还泛化到了没见过的问题。<b>这就是 SFT。</b>
+    </div>
+  </section>
+
+  <!-- pitfall -->
+  <section>
+    <h2><span class="n">7</span>真踩过的坑：小数据 SFT 极易过拟合</h2>
+    <p class="sub">这一课最大的雷。同样 16 条数据，超参没调好就翻车。</p>
+    <div class="panel">
+      <table>
+        <tr><th>配置</th><th>结果</th><th>训练后输出</th></tr>
+        <tr><td>8条 / 8轮 / lr 2e-4</td><td><span class="pill bad">练崩</span></td><td>月亮、（退化成乱码）</td></tr>
+        <tr><td>16条 / 4轮 / lr 1e-4</td><td><span class="pill weak">没学到</span></td><td>月亮绕着地球转。（没喵~）</td></tr>
+        <tr><td><b>16条 / 6轮 / lr 1.5e-4</b></td><td><span class="pill ok">刚好</span></td><td>月亮绕着地球转，<b style="color:var(--green)">喵~</b></td></tr>
+      </table>
+      <div class="callout">
+        <b>规律：</b>数据越少，学习率和轮数越要小心。太猛 → 把模型概率压垮、输出退化；
+        太温和 → 风格没学上。SFT/DPO 在小数据上都有这个脾气（DPO 更敏感）。
+      </div>
+    </div>
+  </section>
+
+  <!-- next -->
+  <section>
+    <h2><span class="n">8</span>SFT 之后呢？</h2>
+    <div class="panel">
+      <p style="margin:0;font-size:13.5px;color:var(--muted)">
+        SFT 教会了"格式和口吻"，但它只会模仿见过的答案、<b class="k">学不会新推理</b>，也不知道"两个答案哪个更好"。
+        于是后训练继续往下走：</p>
+      <div class="pos" style="margin-top:10px">
+        <span class="chip cur">① SFT ✓</span>
+        <span class="chip">② DPO：从"成对偏好"学会"哪个更好"</span>
+        <span class="chip">③ GRPO：用可验证奖励学会"解题"</span>
+        <span class="chip">④ 工具RL：学会"调工具做事"</span>
+      </div>
+      <p style="margin:12px 0 0;font-size:13px;color:var(--muted)">
+        对应 <code>agentic-rl/</code> 里的 <code>stage2_dpo.py</code> / <code>stage3_grpo.py</code> / <code>stage4_agentic.py</code>。</p>
+    </div>
+  </section>
+
+  <footer>
+    配套 <code>agentic-rl/stage1_sft.py</code> · 基座 Qwen2.5-0.5B-Instruct · 本地 Mac(MPS) + LoRA 即可跑<br>
+    跑一遍：<code>cd agentic-rl &amp;&amp; python3 stage1_sft.py</code>
+  </footer>
+
+</div>
+</body>
+</html>
