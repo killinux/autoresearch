@@ -24,3 +24,9 @@ results.tsv
 
 # macOS
 .DS_Store
+
+# RL 教程生成的 checkpoint (example/08 训练产物)
+example/08_policy.pt
+
+# agentic-rl 教程 TRL 训练产物 (checkpoint/日志)
+agentic-rl/outputs/

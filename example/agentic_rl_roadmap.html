@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agentic RL / 后训练 全景图 · 配 7 个可跑代码例子</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --purple:#bc8cff; --pink:#f778ba; --cyan:#39c5cf;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.7;}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 20px 90px}
+  header h1{font-size:30px;margin:0 0 10px;letter-spacing:.3px}
+  header h1 .g{background:linear-gradient(90deg,var(--accent),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--muted);margin:0 0 4px;font-size:15px}
+  .tag{display:inline-block;font-family:var(--mono);font-size:12px;background:var(--panel2);
+    border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--accent);margin:2px 6px 2px 0}
+  section{margin-top:54px}
+  h2{font-size:22px;border-left:4px solid var(--accent);padding-left:12px;margin:0 0 6px}
+  h2.v{border-color:var(--purple)} h2.g{border-color:var(--green)} h2.a{border-color:var(--amber)} h2.p{border-color:var(--pink)}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 24px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;overflow-x:auto}
+  code{font-family:var(--mono);font-size:.9em;color:var(--pink);background:var(--panel2);
+    border:1px solid var(--border);border-radius:5px;padding:1px 6px}
+  b.k{color:var(--text)}
+
+  /* pipeline flow */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center}
+  .stp{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--border);border-radius:12px;
+    padding:14px 12px;text-align:center;position:relative}
+  .stp .s{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .stp .t{font-weight:700;font-size:15px;margin:3px 0}
+  .stp .d{color:var(--muted);font-size:12px}
+  .stp.b{border-color:var(--accent)} .stp.b .t{color:var(--accent)}
+  .stp.v{border-color:var(--purple)} .stp.v .t{color:var(--purple)}
+  .stp.g{border-color:var(--green)} .stp.g .t{color:var(--green)}
+  .stp.a{border-color:var(--amber)} .stp.a .t{color:var(--amber)}
+  .arrow{display:flex;align-items:center;color:var(--muted);font-size:22px;padding:0 4px}
+  @media(max-width:720px){.arrow{transform:rotate(90deg)}.flow{flex-direction:column}}
+
+  /* stage cards */
+  .stage{background:var(--panel);border:1px solid var(--border);border-radius:14px;margin:16px 0;overflow:hidden;
+    display:grid;grid-template-columns:78px 1fr}
+  .stage .lhs{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:700;text-align:center;padding:10px 6px}
+  .stage .lhs .n{font-family:var(--mono);font-size:24px}
+  .stage .lhs .w{font-size:10px;opacity:.85;margin-top:2px;font-weight:500}
+  .s0 .lhs{background:linear-gradient(160deg,#1f6feb,#388bfd)}
+  .s1 .lhs{background:linear-gradient(160deg,#1f6feb,#56a5ff)}
+  .s2 .lhs{background:linear-gradient(160deg,#8957e5,#bc8cff)}
+  .s3 .lhs{background:linear-gradient(160deg,#2ea043,#3fb950)}
+  .s4 .lhs{background:linear-gradient(160deg,#bb8009,#d29922)}
+  .stage .body{padding:16px 20px}
+  .stage h3{margin:0 0 4px;font-size:17px}
+  .stage .why{color:var(--muted);font-size:13px;margin:0 0 10px}
+  .stage ul{margin:0;padding-left:18px;font-size:13.5px}
+  .stage ul li{margin:3px 0}
+  .anchor{display:inline-block;margin-top:10px;font-size:12.5px;font-family:var(--mono);
+    background:rgba(63,185,80,.1);border:1px solid var(--green);color:var(--green);border-radius:6px;padding:4px 10px}
+  .anchor.none{background:rgba(139,148,158,.1);border-color:var(--border);color:var(--muted)}
+
+  /* infra grid */
+  .grid4{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.grid4{grid-template-columns:1fr}}
+  .icard{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+  .icard .h{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+  .icard .h .pill{font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:99px;color:#0d1117}
+  .icard .d{color:var(--muted);font-size:13px;margin-top:6px}
+  .icard .tools{font-family:var(--mono);font-size:11.5px;color:var(--cyan);margin-top:8px}
+
+  /* reward hacking before/after */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.ba{grid-template-columns:1fr}}
+  .bcard{border-radius:12px;padding:16px 18px;border:1px solid}
+  .bad{background:rgba(248,81,73,.07);border-color:var(--red)}
+  .good{background:rgba(63,185,80,.07);border-color:var(--green)}
+  .bcard .ti{font-weight:700;font-size:14px}
+  .bad .ti{color:var(--red)} .good .ti{color:var(--green)}
+  .bcard pre{font-family:var(--mono);font-size:12px;background:#0d1117;border:1px solid var(--border);
+    border-radius:8px;padding:10px 12px;overflow-x:auto;margin:10px 0 0;color:var(--text)}
+
+  /* mapping table */
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  td .ex{font-family:var(--mono);color:var(--accent);font-weight:600}
+  .lv{font-size:11px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .lv.core{background:rgba(63,185,80,.15);color:var(--green)}
+  .lv.read{background:rgba(139,148,158,.15);color:var(--muted)}
+
+  .callout{background:var(--panel2);border-left:3px solid var(--amber);border-radius:8px;padding:12px 16px;font-size:13.5px;color:var(--muted);margin:14px 0}
+  .callout b{color:var(--text)}
+
+  /* 三条规划路线 */
+  .routes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:760px){.routes{grid-template-columns:1fr}}
+  .route{border-radius:12px;padding:16px 18px;border:1px solid var(--border);background:var(--panel2)}
+  .route.r1{border-color:var(--green);background:rgba(63,185,80,.06)}
+  .route.r2{border-color:var(--purple);background:rgba(188,140,255,.06)}
+  .route.r3{border-color:var(--cyan);background:rgba(57,197,207,.06)}
+  .route .rn{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .route .rt{font-weight:700;font-size:16px;margin:2px 0 4px}
+  .route.r1 .rt{color:var(--green)} .route.r2 .rt{color:var(--purple)} .route.r3 .rt{color:var(--cyan)}
+  .route .row{font-size:12.5px;margin:7px 0;color:var(--muted)}
+  .route .row b{color:var(--text)}
+  .cbar{display:flex;gap:3px;margin:9px 0 4px}
+  .cbar .seg{font-size:10px;font-family:var(--mono);padding:4px 2px;text-align:center;border-radius:4px;color:#0d1117;font-weight:700;white-space:nowrap;overflow:hidden}
+  .seg.tr{background:var(--amber)} .seg.inf{background:var(--cyan)}
+  .clbl{font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+  .route .ess{font-size:12.5px;margin-top:11px;padding-top:10px;border-top:1px solid var(--border);color:var(--text);font-weight:600}
+
+  footer{margin-top:54px;color:var(--muted);font-size:12px;text-align:center;line-height:1.9;border-top:1px solid var(--border);padding-top:20px}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🧭 <span class="g">Agentic RL / 后训练</span> 全景图</h1>
+    <p>一张图看懂 <b style="color:var(--text)">SFT → 偏好对齐 → RLVR(GRPO) → Agentic RL + Infra</b> 这条后训练主线，</p>
+    <p>每一站都钉上 <code>example/</code> 里一个<b style="color:var(--text)">能跑的代码例子</b>，把"读论文"变成"亲手跑"。</p>
+    <p style="margin-top:10px">
+      <span class="tag">配套 12 周学习计划</span>
+      <span class="tag">7 个纯 CPU 秒级例子</span>
+      <span class="tag">对口 verl / CodeRL / Reward System</span>
+    </p>
+  </header>
+
+  <!-- 主线流程 -->
+  <section>
+    <h2>后训练主线：base 模型怎么一步步变"能干活"</h2>
+    <p class="sub">预训练给了模型"知识"，后训练给它"听话 + 会推理 + 会做事"。四步走：</p>
+    <div class="panel">
+      <div class="flow">
+        <div class="stp b"><div class="s">起点</div><div class="t">Base 模型</div><div class="d">预训练完，会续写不会听话</div></div>
+        <div class="arrow">→</div>
+        <div class="stp b"><div class="s">阶段1</div><div class="t">SFT</div><div class="d">学指令格式<br>"会好好回答"</div></div>
+        <div class="arrow">→</div>
+        <div class="stp v"><div class="s">阶段2</div><div class="t">偏好对齐</div><div class="d">DPO / RLHF<br>"对齐人类口味"</div></div>
+        <div class="arrow">→</div>
+        <div class="stp g"><div class="s">阶段3</div><div class="t">RLVR · GRPO</div><div class="d">可验证奖励<br>"学会推理"</div></div>
+        <div class="arrow">→</div>
+        <div class="stp a"><div class="s">阶段4</div><div class="t">Agentic RL</div><div class="d">多步+调工具<br>"学会做事"</div></div>
+      </div>
+      <div class="callout" style="margin-top:18px">
+        一句话串起来：<b>SFT 教会说话 → 偏好对齐调口味 → GRPO 学会推理 → Agentic RL 学会做事</b>。
+        越往右越像经典 RL（多步、稀疏奖励），也越是当下最热、岗位最看重的一段。
+      </div>
+    </div>
+  </section>
+
+  <!-- 阶段卡片 -->
+  <section>
+    <h2 class="g">五个阶段 · 各钉一个能跑的代码例子</h2>
+    <p class="sub">绿色徽章 = <code>example/</code> 里直接 <code>python3</code> 能跑的锚点；灰色 = 以读论文 / 跑 TRL 为主，本系列未做玩具代码。</p>
+
+    <div class="stage s0">
+      <div class="lhs"><div class="n">0</div><div class="w">地基</div></div>
+      <div class="body">
+        <h3>经典 RL 直觉</h3>
+        <p class="why">先有 policy / reward / advantage / 探索vs利用 / 多步决策的心智模型，后面 GRPO 才不抽象。</p>
+        <ul>
+          <li><b class="k">01 老虎机</b>：动作 + 奖励，探索 vs 利用（ε-greedy / UCB）</li>
+          <li><b class="k">02 迷宫</b>：引入<b class="k">状态</b>，表格 Q-learning，完整 MDP</li>
+          <li><b class="k">03 倒立摆</b>：状态连续→<b class="k">神经网络</b>代替表格，策略梯度</li>
+        </ul>
+        <span class="anchor">▶ 01_bandit.py · 02_qlearning_gridworld.py · 03_cartpole_reinforce.py</span>
+      </div>
+    </div>
+
+    <div class="stage s1">
+      <div class="lhs"><div class="n">1</div><div class="w">SFT</div></div>
+      <div class="body">
+        <h3>监督微调（指令微调）</h3>
+        <p class="why">决定"格式与基础"，但学不会没见过的推理——这正是要上 RL 的原因。</p>
+        <ul>
+          <li>核心概念：chat template、<b class="k">loss masking</b>（只在 assistant token 算 loss）、packing</li>
+          <li>动手：TRL <code>SFTTrainer</code> + Qwen2.5-0.5B/1.5B 跑一次</li>
+        </ul>
+        <span class="anchor none">本系列未做玩具代码 · 走 TRL SFTTrainer（非 RL，故不在七连例内）</span>
+      </div>
+    </div>
+
+    <div class="stage s2">
+      <div class="lhs"><div class="n">2</div><div class="w">对齐</div></div>
+      <div class="body">
+        <h3>偏好对齐 / RLHF</h3>
+        <p class="why">让模型对齐人类偏好。先学最简单的 DPO，再理解经典 PPO+RM 为什么复杂、为何被 GRPO 简化。</p>
+        <ul>
+          <li><b class="k">DPO</b>：把 RLHF 变成一个分类损失，<b class="k">不用 reward model、不用采样</b>（最简单，先学）</li>
+          <li><b class="k">PPO + Reward Model</b>：RM 怎么训、KL 惩罚为什么必要</li>
+          <li><b class="k">reward hacking</b> 是什么——为阶段4 的奖励设计埋伏笔</li>
+        </ul>
+        <span class="anchor none">DPO 走 TRL DPOTrainer · RLHF 直觉见 04（GRPO 那套同源）</span>
+      </div>
+    </div>
+
+    <div class="stage s3">
+      <div class="lhs"><div class="n">3</div><div class="w">GRPO</div></div>
+      <div class="body">
+        <h3>RLVR / 推理 RL —— 分水岭，务必吃透</h3>
+        <p class="why">可验证奖励（答案对不对 / 格式对不对）+ GRPO 大规模 RL，催生"会思考"的模型（DeepSeek-R1 / o1）。</p>
+        <ul>
+          <li><b class="k">GRPO 机制</b>：去掉 critic，同一 prompt 采 N 个、<b class="k">组内归一化算 advantage</b></li>
+          <li>规则式奖励：答案正确 + 格式正确，无需训 reward model</li>
+          <li>"aha moment"：模型自发变长 / 学会反思</li>
+        </ul>
+        <span class="anchor">▶ 04_grpo_tiny_llm.py（GRPO 教小 GPT 排序，含真实 reward hacking）· 05_grpo_minimal.py（40 行 GRPO 骨架，能背能改）</span>
+      </div>
+    </div>
+
+    <div class="stage s4">
+      <div class="lhs"><div class="n">4</div><div class="w">Agentic</div></div>
+      <div class="body">
+        <h3>Agentic RL + Infra —— 最对口工业岗</h3>
+        <p class="why">从单轮到多轮：<code>think → 调工具 → 看结果 → 再 think…</code>，奖励在<b class="k">轨迹末端</b>给（稀疏）。</p>
+        <ul>
+          <li>单轮→多轮：<b class="k">轨迹级奖励</b>、过程 vs 结果奖励、信用分配</li>
+          <li>代表方向：代码/工具（ToRL/ReTool/CodeRL）· 搜索（Search-R1）· 通用多轮（RAGEN）</li>
+          <li><b class="k">Reward 设计的坑</b>：reward hacking、稀疏奖励、可验证性、防作弊</li>
+        </ul>
+        <span class="anchor">▶ 06_agentic_rl_tool.py（多步+调工具+稀疏奖励）· 07_agentic_codeRL.py（沙箱跑单测当奖励+reward hacking）</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Infra 四大组件 -->
+  <section>
+    <h2 class="a">阶段4 拆解：Agentic RL Infra 的四大组件</h2>
+    <p class="sub">工业框架（verl / OpenRLHF / AReaL）再大，骨架也是这四块。下面标了它们在 <code>07_agentic_codeRL.py</code> 里对应哪段——一个 ~120 行的例子就把四件套缩微齐了。</p>
+    <div class="panel">
+      <div class="grid4">
+        <div class="icard">
+          <div class="h"><span class="pill" style="background:var(--accent)">Rollout</span> 采样</div>
+          <div class="d">用当前策略生成一批回答/轨迹/代码。工业上靠 vLLM / SGLang 高吞吐推理。</div>
+          <div class="tools">07 里 ↔ <code>dist.sample((group,))</code> 采 G 份程序</div>
+        </div>
+        <div class="icard">
+          <div class="h"><span class="pill" style="background:var(--green)">Reward System</span> 打分 ★</div>
+          <div class="d">规则 / <b style="color:var(--text)">沙箱执行单测</b> / LLM-judge / PRM。Agentic RL 真正的胜负手。</div>
+          <div class="tools">07 里 ↔ <code>run_tests()</code> 真的 exec 跑单测</div>
+        </div>
+        <div class="icard">
+          <div class="h"><span class="pill" style="background:var(--purple)">训练</span> 更新</div>
+          <div class="d">拿奖励算优势、更新策略。FSDP / Megatron 做大规模并行。</div>
+          <div class="tools">07 里 ↔ GRPO 组优势 + PPO clip（和 05 同款）</div>
+        </div>
+        <div class="icard">
+          <div class="h"><span class="pill" style="background:var(--amber)">编排</span> Orchestration</div>
+          <div class="d">把上面三步拼成训练循环，管多轮 rollout、数据流。verl 的 HybridFlow 就干这个。</div>
+          <div class="tools">07 里 ↔ <code>train()</code> 那个训练循环</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- reward hacking 实证 -->
+  <section>
+    <h2 class="p">聚光灯：reward hacking 长什么样（来自 07 的真实输出）</h2>
+    <p class="sub">同一个 agent、同一套 GRPO，<b style="color:var(--text)">只改奖励设计</b>，结果天差地别。任务：写 <code>solve(x)</code> 使 <code>solve(3)==6</code>。</p>
+    <div class="ba">
+      <div class="bcard bad">
+        <div class="ti">✗ 弱奖励（只看可见用例 solve(3)==6）</div>
+        <pre>学到的程序: solve(x) = 6   # 写死答案
+可见用例: 过 ✓
+隐藏用例通过率: 0%
+策略: P(作弊)=0.86, P(x*2)=0.13</pre>
+        <div style="color:var(--muted);font-size:12.5px;margin-top:8px">奖励留了后门 → agent 学会<b style="color:var(--red)">蒙混作弊</b>，根本不会泛化。</div>
+      </div>
+      <div class="bcard good">
+        <div class="ti">✓ 稳健奖励（可见 + 隐藏用例一起）</div>
+        <pre>学到的程序: solve(x) = x * 2
+可见用例: 过 ✓
+隐藏用例通过率: 100%
+策略: P(x*2)=1.00</pre>
+        <div style="color:var(--muted);font-size:12.5px;margin-top:8px">奖励难作弊 → agent 被逼出<b style="color:var(--green)">真正泛化的解</b>。</div>
+      </div>
+    </div>
+    <div class="callout">
+      <b>这就是"代码题不能靠 print 答案绕过单测"要堵的洞。</b>可验证、难作弊的奖励 = 多样且有区分度的用例。
+      在 Agentic RL 里，<b>奖励设计往往比训练算法本身更决定成败</b>——这也是 Reward System / CodeRL 岗位的核心价值。
+    </div>
+  </section>
+
+  <!-- 三条规划路线 -->
+  <section>
+    <h2 class="v">拉高视角：通往 plan agent 的三条路线</h2>
+    <p class="sub">这份路线图<b style="color:var(--text)">全程在讲第 1 条</b>（把策略训进权重）。但"让 agent 会决策"其实有三条路，
+      区别只在于——<b style="color:var(--text)">把算力花在训练、还是推理、还是脑内模拟</b>。</p>
+    <div class="panel">
+      <div class="routes">
+
+        <div class="route r1">
+          <div class="rn">路线 1 · 本路线图 01–07</div>
+          <div class="rt">RL 训进权重</div>
+          <div class="row"><b>代表</b>：GRPO、o1 / R1、本系列 04–07</div>
+          <div class="row"><b>怎么变聪明</b>：训练时海量试错，把好策略压进权重</div>
+          <div class="clbl">算力花在哪 ↓</div>
+          <div class="cbar"><span class="seg tr" style="flex:5">训练 ▓▓▓▓</span><span class="seg inf" style="flex:1">推理</span></div>
+          <div class="row"><b>快慢/代价</b>：推理一遍过、最快；但要巨量训练+数据</div>
+          <div class="ess">"训练时变聪明，用时一遍过"</div>
+        </div>
+
+        <div class="route r2">
+          <div class="rn">路线 2 · 可做的第 8 课</div>
+          <div class="rt">MCTS 搜树</div>
+          <div class="row"><b>代表</b>：AlphaZero、MuZero、LATS、rStar</div>
+          <div class="row"><b>怎么变聪明</b>：权重不变，推理时用 UCT 建树显式搜索</div>
+          <div class="clbl">算力花在哪 ↓</div>
+          <div class="cbar"><span class="seg tr" style="flex:1">训练</span><span class="seg inf" style="flex:5">推理 ▓▓▓▓（搜树）</span></div>
+          <div class="row"><b>快慢/代价</b>：常更强；但慢、要好模型 + 价值估计</div>
+          <div class="ess">"用时多想想，搜出更优解"</div>
+        </div>
+
+        <div class="route r3">
+          <div class="rn">路线 3 · LeCun 押注</div>
+          <div class="rt">世界模型规划 (JEPA)</div>
+          <div class="row"><b>代表</b>：LeCun JEPA、V-JEPA 2（机器人零样本规划）</div>
+          <div class="row"><b>怎么变聪明</b>：自监督学世界模型，在 latent 里模拟后果、再优化动作（MPC）</div>
+          <div class="clbl">算力花在哪 ↓</div>
+          <div class="cbar"><span class="seg tr" style="flex:3">自监督预训练 ▓▓</span><span class="seg inf" style="flex:3">推理 ▓▓（想象+规划）</span></div>
+          <div class="row"><b>快慢/代价</b>：不靠试错、样本高效；仍早期、非主流</div>
+          <div class="ess">"脑内模拟后果，规划最优动作"</div>
+        </div>
+
+      </div>
+      <div class="callout" style="border-color:var(--purple)">
+        <b>三条不是互斥，正在融合：</b>rStar-Math 用 MCTS（路线2）造高质量数据，再 GRPO（路线1）蒸进权重；
+        MuZero = 世界模型（路线3 思想）+ MCTS（路线2）。未来的强 agent 很可能<b>三者叠加</b>：
+        好的权重 + 推理时搜索 + 世界模型预演。
+      </div>
+      <div class="callout" style="border-color:var(--green)">
+        <b>放回你的学习线：</b>路线1 = 已做的 <code>01–07</code>（训练时学会）；路线2 = 想做的<b>最小 MCTS 迷宫规划</b>（推理时搜树，把第 1 课的 UCT 升级到真规划）；
+        路线3 = 概念前沿（V-JEPA 2 在脑内世界模型里规划）。
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 例子 → 计划 映射表 -->
+  <section>
+    <h2>七个代码例子 ↔ 学习计划阶段 对照表</h2>
+    <p class="sub">想沿计划走，就按这张表把"读到哪一阶段"对到"跑哪个例子"。</p>
+    <div class="panel" style="padding:8px 16px">
+      <table>
+        <tr><th>例子</th><th>对应阶段</th><th>钉住的概念</th><th>类型</th></tr>
+        <tr><td><span class="ex">01_bandit</span></td><td>阶段0 地基</td><td>探索 vs 利用、UCB</td><td><span class="lv core">能跑</span></td></tr>
+        <tr><td><span class="ex">02_qlearning</span></td><td>阶段0 地基</td><td>状态、Q 表、MDP</td><td><span class="lv core">能跑</span></td></tr>
+        <tr><td><span class="ex">03_cartpole</span></td><td>阶段0 地基</td><td>神经网络策略、策略梯度</td><td><span class="lv core">能跑</span></td></tr>
+        <tr><td>（SFT）</td><td>阶段1 SFT</td><td>chat template、loss masking</td><td><span class="lv read">读+TRL</span></td></tr>
+        <tr><td>（DPO/PPO）</td><td>阶段2 对齐</td><td>DPO、RM、KL 惩罚</td><td><span class="lv read">读+TRL</span></td></tr>
+        <tr><td><span class="ex">04_grpo_tiny_llm</span></td><td>阶段3 GRPO</td><td>在 LLM 上做 RL、组相对优势</td><td><span class="lv core">能跑</span></td></tr>
+        <tr><td><span class="ex">05_grpo_minimal</span></td><td>阶段3 GRPO</td><td>GRPO 最小骨架、KL 锚点</td><td><span class="lv core">能跑</span></td></tr>
+        <tr><td><span class="ex">06_agentic_rl_tool</span></td><td>阶段4 Agentic</td><td>多步 + 调工具 + 稀疏奖励</td><td><span class="lv core">能跑</span></td></tr>
+        <tr><td><span class="ex">07_agentic_codeRL</span></td><td>阶段4 Agentic</td><td>Reward System、reward hacking</td><td><span class="lv core">能跑</span></td></tr>
+      </table>
+    </div>
+    <div class="callout" style="border-color:var(--accent)">
+      <b>和 autoresearch 的关系：</b>这个仓库本身就是一个 <b>Agentic RL 系统</b>——agent 在真实环境里
+      <b>多步操作</b>（改代码→训练→看指标→再改），用 <b>val_bpb 这种可验证指标</b>当奖励。
+      理解了 06/07，再看 autoresearch 的"自主研究循环"，会发现是同一个范式的放大版。
+    </div>
+  </section>
+
+  <footer>
+    配套 <code>example/</code> 七连例（01→07）· 路线对应「Agentic RL / 后训练 12 周学习计划」<br>
+    主线抓 GRPO（阶段3）· Infra 那条线靠 verl（阶段4 最短路径）· 知识截至 2026-01，仓库链接请自行核实最新地址
+  </footer>
+
+</div>
+</body>
+</html>
